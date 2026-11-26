@@ -12,7 +12,8 @@ import type { RouterOptions } from '../../routes.js';
 import { CompositionService } from '../../services/CompositionService.js';
 import { flushMapperIntoResponse, RouterConfigMapperUpdater } from '../../services/RouterConfigMapperUpdater.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { sendGraphLifecycle } from '../../webhooks/graphLifecycleWebhook.js';
+import { LifecycleGraph, OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
 export function moveFederatedGraph(
   opts: RouterOptions,
@@ -36,6 +37,8 @@ export function moveFederatedGraph(
       logger,
       opts.blobStorage,
     );
+
+    const movedLifecycleGraphs: LifecycleGraph[] = [];
 
     const result = await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
@@ -172,6 +175,13 @@ export function moveFederatedGraph(
         });
 
       for (const movedGraph of movedGraphs) {
+        movedLifecycleGraphs.push({
+          id: movedGraph.id,
+          name: movedGraph.name,
+          namespace: newNamespace.name,
+          type: 'federated',
+        });
+
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
           organizationSlug: authContext.organizationSlug,
@@ -227,6 +237,10 @@ export function moveFederatedGraph(
         compositionWarnings,
       };
     });
+
+    for (const graph of movedLifecycleGraphs) {
+      sendGraphLifecycle(opts, { eventName: OrganizationEventName.GRAPH_MOVED, authContext, graph });
+    }
 
     return flushMapperIntoResponse(mapperUpdater, result);
   });

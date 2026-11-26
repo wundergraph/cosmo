@@ -14,6 +14,7 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SubgraphRepository, UpdateSubgraphSchemaData } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import type { AuthContext, FederatedGraphDTO, SubgraphDTO } from '../../../types/index.js';
@@ -238,12 +239,66 @@ export function publishFederatedSubgraphs(
       };
     }
 
+    // Match every changed subgraph schema with the approved proposals, as a single publish does. Feature subgraphs
+    // are not matched.
+    const matchedProposalEntities: MatchedProposalEntity[] = [];
+    const proposalMismatches: string[] = [];
+    if (namespace.enableProposals) {
+      const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
+      const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
+
+      for (const { subgraph, schema } of resolved) {
+        if (
+          !proposalConfig ||
+          subgraph.isFeatureSubgraph ||
+          (await ProposalRepository.isLiveSchema({
+            liveSchemaSDL: subgraph.schemaSDL,
+            schemaSDL: schema,
+            routerCompatibilityVersion,
+          }))
+        ) {
+          continue;
+        }
+
+        const matches = await proposalRepo.matchSchemaWithProposals({
+          subgraphName: subgraph.name,
+          namespaceId: namespace.id,
+          schemaSDL: schema,
+          routerCompatibilityVersion,
+          isDeleted: false,
+          approvedOnly: true,
+        });
+        if (matches.length === 0 && proposalConfig.publishSeverityLevel !== 'warn') {
+          proposalMismatches.push(
+            `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.`,
+          );
+        }
+
+        matchedProposalEntities.push(...matches);
+      }
+    }
+
+    if (proposalMismatches.length > 0) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
+          details: proposalMismatches.join('\n'),
+        },
+        compositionErrors: [],
+        deploymentErrors: [],
+        compositionWarnings: [],
+        updatedSubgraphNames: [],
+      };
+    }
+
     const runBatchPublishParams: RunBatchPublishParams = {
       opts,
       logger,
       authContext,
       disableResolvabilityValidation: req.disableResolvabilityValidation,
       items,
+      matchedProposalEntities,
+      namespaceName: namespace.name,
     };
 
     if (req.async) {
@@ -358,12 +413,19 @@ export function publishFederatedSubgraphs(
   });
 }
 
+type MatchedProposalEntity = {
+  proposalId: string;
+  proposalSubgraphId: string;
+};
+
 type RunBatchPublishParams = {
   opts: RouterOptions;
   logger: FastifyBaseLogger;
   authContext: AuthContext;
   disableResolvabilityValidation: boolean | undefined;
   items: (UpdateSubgraphSchemaData & { name: string })[];
+  matchedProposalEntities: MatchedProposalEntity[];
+  namespaceName: string;
   shouldRefreshSubgraphs?: boolean;
 };
 
@@ -373,9 +435,12 @@ async function runBatchPublish({
   authContext,
   disableResolvabilityValidation,
   items,
+  matchedProposalEntities,
+  namespaceName,
   shouldRefreshSubgraphs,
 }: RunBatchPublishParams) {
   const auditLogRepo = new AuditLogRepository(opts.db);
+  const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
   const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
   const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
   const orgWebhooks = new OrganizationWebhookService(
@@ -481,6 +546,45 @@ async function runBatchPublish({
             slug: authContext.organizationSlug,
           },
           errors: hasErrors,
+          actor_id: authContext.userId,
+        },
+      },
+      authContext.userId,
+    );
+  }
+
+  // Mark the matched proposal subgraphs as published; a proposal whose subgraphs are now all published is PUBLISHED.
+  for (const matchedEntity of matchedProposalEntities) {
+    const { allSubgraphsPublished } = await proposalRepo.markProposalSubgraphAsPublished(matchedEntity);
+    if (!allSubgraphsPublished) {
+      continue;
+    }
+
+    const proposal = await proposalRepo.ById(matchedEntity.proposalId);
+    const federatedGraph = updatedFederatedGraphs.find((graph) => graph.id === proposal?.proposal.federatedGraphId);
+    if (!proposal || !federatedGraph) {
+      continue;
+    }
+
+    orgWebhooks.send(
+      {
+        eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+        payload: {
+          federated_graph: {
+            id: federatedGraph.id,
+            name: federatedGraph.name,
+            namespace: federatedGraph.namespace,
+          },
+          organization: {
+            id: authContext.organizationId,
+            slug: authContext.organizationSlug,
+          },
+          proposal: {
+            id: proposal.proposal.id,
+            name: proposal.proposal.name,
+            namespace: namespaceName,
+            state: 'PUBLISHED',
+          },
           actor_id: authContext.userId,
         },
       },
