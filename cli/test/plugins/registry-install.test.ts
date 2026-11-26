@@ -42,76 +42,134 @@ const serveDirectory = async (directory: string) => {
   return { url: `http://127.0.0.1:${port}/cli`, requested, close: () => server.close() };
 };
 
-describe('wgc plugins install from WGC_PLUGIN_REGISTRY_URL', () => {
-  test(
-    'installs the plugin tarball with the SDK tarball from the same URL and no npm registry',
-    {
-      timeout: 120_000,
+/** Serves wgc-plugin-sdk.tgz and wgc-plugin-relay.tgz under <url>/cli, as a Hub deployment serves its plugins. */
+const servePluginTarballs = async () => {
+  const tarballs = join(createTempDir(), 'cli');
+  mkdirSync(tarballs);
+  await packPackage(tarballs, 'wgc-plugin-sdk.tgz', {
+    'package.json': JSON.stringify({
+      name: '@wundergraph/wgc-plugin-sdk',
+      version: '0.1.0',
+      type: 'module',
+      main: 'index.js',
+    }),
+    'index.js': 'export const definePlugin = (plugin) => plugin;\n',
+  });
+  await packPackage(tarballs, 'wgc-plugin-relay.tgz', {
+    'package.json': JSON.stringify({
+      name: '@acme/wgc-plugin-relay',
+      version: '2.0.0',
+      type: 'module',
+      main: 'index.js',
+      keywords: ['wgc-plugin'],
+      dependencies: { '@wundergraph/wgc-plugin-sdk': '0.1.0' },
+    }),
+    'index.js':
+      "import { definePlugin } from '@wundergraph/wgc-plugin-sdk';\nexport default definePlugin({ name: 'relay', description: 'Relays', register() {} });\n",
+  });
+  await packPackage(tarballs, 'echo-1.0.0.tgz', {
+    'package.json': JSON.stringify({
+      name: 'wgc-plugin-echo',
+      version: '1.0.0',
+      type: 'module',
+      main: 'index.js',
+    }),
+    'index.js': "export default { name: 'echo', description: 'Echoes', register() {} };\n",
+  });
+  vi.stubEnv('npm_config_registry', 'http://127.0.0.1:9/');
+  // npm asks the registry about the SDK, gets nothing and keeps the tarball; no retries keeps the test fast.
+  vi.stubEnv('npm_config_fetch_retries', '0');
+  return serveDirectory(join(tarballs, '..'));
+};
+
+const installPlugin = async (spec: string, registryUrl: string | undefined) => {
+  const managedDir = join(createTempDir(), 'plugins');
+  const stdout = createMemoryStream();
+  const program = new Command('wgc');
+  program.exitOverride();
+  program.addCommand(
+    PluginCommands({
+      environment: { managedDir, workspaceRoot: undefined, runsFromSource: false, registryUrl },
+      npm: runNpm,
+      caller: 'script',
+      stdout,
+      stderr: createMemoryStream(),
+    }),
+  );
+  await program.parseAsync(['node', 'wgc', 'plugins', 'install', spec]);
+  return { managedDir, result: JSON.parse(stdout.text()) };
+};
+
+const installedRelay = (managedDir: string) => ({
+  ok: true,
+  data: {
+    plugin: {
+      name: 'relay',
+      packageName: '@acme/wgc-plugin-relay',
+      version: '2.0.0',
+      directory: join(managedDir, 'node_modules', '@acme/wgc-plugin-relay'),
     },
+  },
+});
+
+describe('wgc plugins install from a Hub deployment', () => {
+  test(
+    'by name, installs the plugin tarball with the SDK tarball from WGC_PLUGIN_REGISTRY_URL and no npm registry',
+    { timeout: 120_000 },
     async () => {
-      const tarballs = join(createTempDir(), 'cli');
-      mkdirSync(tarballs);
-      await packPackage(tarballs, 'wgc-plugin-sdk.tgz', {
-        'package.json': JSON.stringify({
-          name: '@wundergraph/wgc-plugin-sdk',
-          version: '0.1.0',
-          type: 'module',
-          main: 'index.js',
-        }),
-        'index.js': 'export const definePlugin = (plugin) => plugin;\n',
-      });
-      await packPackage(tarballs, 'wgc-plugin-relay.tgz', {
-        'package.json': JSON.stringify({
-          name: '@acme/wgc-plugin-relay',
-          version: '2.0.0',
-          type: 'module',
-          main: 'index.js',
-          keywords: ['wgc-plugin'],
-          dependencies: { '@wundergraph/wgc-plugin-sdk': '0.1.0' },
-        }),
-        'index.js':
-          "import { definePlugin } from '@wundergraph/wgc-plugin-sdk';\nexport default definePlugin({ name: 'relay', description: 'Relays', register() {} });\n",
-      });
-      const server = await serveDirectory(join(tarballs, '..'));
-      vi.stubEnv('npm_config_registry', 'http://127.0.0.1:9/');
-      // npm asks the registry about the SDK, gets nothing and keeps the tarball; no retries keeps the test fast.
-      vi.stubEnv('npm_config_fetch_retries', '0');
-
-      const managedDir = join(createTempDir(), 'plugins');
-      const stdout = createMemoryStream();
-      const program = new Command('wgc');
-      program.exitOverride();
-      program.addCommand(
-        PluginCommands({
-          environment: { managedDir, workspaceRoot: undefined, runsFromSource: false, registryUrl: server.url },
-          npm: runNpm,
-          caller: 'script',
-          stdout,
-          stderr: createMemoryStream(),
-        }),
-      );
-
+      const server = await servePluginTarballs();
       try {
-        await program.parseAsync(['node', 'wgc', 'plugins', 'install', 'relay']);
+        const { managedDir, result } = await installPlugin('relay', server.url);
+
+        expect(result).toEqual(installedRelay(managedDir));
+        expect([...new Set(server.requested)].sort()).toEqual(['/cli/wgc-plugin-relay.tgz', '/cli/wgc-plugin-sdk.tgz']);
+        expect(JSON.parse(readFileSync(join(managedDir, 'plugins.json'), 'utf8'))).toEqual({
+          plugins: { relay: '@acme/wgc-plugin-relay' },
+        });
       } finally {
         server.close();
       }
+    },
+  );
 
-      expect(JSON.parse(stdout.text())).toEqual({
+  test(
+    'by tarball URL, installs the plugin with the SDK tarball next to it and no npm registry',
+    { timeout: 120_000 },
+    async () => {
+      const server = await servePluginTarballs();
+      try {
+        for (const registryUrl of [server.url, undefined]) {
+          const { managedDir, result } = await installPlugin(`${server.url}/wgc-plugin-relay.tgz`, registryUrl);
+
+          expect(result).toEqual(installedRelay(managedDir));
+          expect(JSON.parse(readFileSync(join(managedDir, 'plugins.json'), 'utf8'))).toEqual({
+            plugins: { relay: '@acme/wgc-plugin-relay' },
+          });
+        }
+      } finally {
+        server.close();
+      }
+    },
+  );
+
+  test('by any other tarball URL, installs the package that tarball holds', { timeout: 120_000 }, async () => {
+    const server = await servePluginTarballs();
+    try {
+      const { managedDir, result } = await installPlugin(`${server.url}/echo-1.0.0.tgz`, undefined);
+
+      expect(result).toEqual({
         ok: true,
         data: {
           plugin: {
-            name: 'relay',
-            packageName: '@acme/wgc-plugin-relay',
-            version: '2.0.0',
-            directory: join(managedDir, 'node_modules', '@acme/wgc-plugin-relay'),
+            name: 'echo',
+            packageName: 'wgc-plugin-echo',
+            version: '1.0.0',
+            directory: join(managedDir, 'node_modules', 'wgc-plugin-echo'),
           },
         },
       });
-      expect([...new Set(server.requested)].sort()).toEqual(['/cli/wgc-plugin-relay.tgz', '/cli/wgc-plugin-sdk.tgz']);
-      expect(JSON.parse(readFileSync(join(managedDir, 'plugins.json'), 'utf8'))).toEqual({
-        plugins: { relay: '@acme/wgc-plugin-relay' },
-      });
-    },
-  );
+    } finally {
+      server.close();
+    }
+  });
 });

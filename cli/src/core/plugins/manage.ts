@@ -50,14 +50,34 @@ const registryTarget = (registryUrl: string, name: string): InstallTarget => {
   return { npmSpecs: [`${base}/wgc-plugin-sdk.tgz`, pluginSpec], pluginSpec, packageName: knownPlugins[name] };
 };
 
-/** npm 12 refuses remote tarballs unless asked; the registry URL is the user's explicit choice. */
-const remoteFlags = (environment: PluginEnvironment): string[] =>
-  environment.registryUrl === undefined ? [] : ['--allow-remote=all'];
+const isUrl = (spec: string): boolean => /^https?:\/\//.test(spec);
+
+const pluginTarballPattern = /^(?<base>.+)\/wgc-plugin-(?<name>[a-z][\da-z-]*)\.tgz$/;
+
+/**
+ * A tarball URL. One named wgc-plugin-<name>.tgz is laid out like the registry URL, so it installs
+ * with the SDK tarball next to it. Only the downloaded tarball names the package of any other URL.
+ */
+const urlTarget = (url: string): InstallTarget => {
+  const pluginTarball = pluginTarballPattern.exec(url)?.groups;
+  if (pluginTarball?.base && pluginTarball.name) {
+    return registryTarget(pluginTarball.base, pluginTarball.name);
+  }
+  return { npmSpecs: [url], pluginSpec: url, packageName: undefined };
+};
+
+/** npm 12 refuses remote tarballs unless asked; the registry URL or a tarball URL is the user's explicit choice. */
+const remoteFlags = (environment: PluginEnvironment, npmSpecs: string[]): string[] =>
+  environment.registryUrl === undefined && !npmSpecs.some((spec) => isUrl(spec)) ? [] : ['--allow-remote=all'];
 
 const npmTarget = (spec: string): Result<InstallTarget> => {
   const known = knownPlugins[spec];
   if (known) {
     return ok({ npmSpecs: [known], pluginSpec: known, packageName: known });
+  }
+
+  if (isUrl(spec)) {
+    return ok(urlTarget(spec));
   }
 
   if (!isLocalPath(spec)) {
@@ -151,7 +171,7 @@ export const installPlugin = async ({
 
   progress({ step: 'npm-install', subject: pluginSpec, message: `Installing ${npmSpecs.join(' ')} with npm` });
   const installed = await npm(
-    ['install', '--save', '--no-audit', '--no-fund', ...remoteFlags(environment), ...npmSpecs],
+    ['install', '--save', '--no-audit', '--no-fund', ...remoteFlags(environment, npmSpecs), ...npmSpecs],
     environment.managedDir,
   );
   if (!installed.success) {
