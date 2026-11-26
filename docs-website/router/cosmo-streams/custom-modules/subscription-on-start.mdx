@@ -64,8 +64,16 @@ type SubscriptionOnStartHandlerContext interface {
 	//
 	// You can use EmitEvent to emit this event to subscriptions.
 	NewEvent(data []byte) datasource.MutableStreamEvent
+	// Set stores a value under the given key for this subscription.
+	// A value stored here can be read with Get in SubscriptionOnEnd of the same subscription.
+	Set(key string, value any)
+	// Get returns the value stored under the given key for this subscription
+	Get(key string) (value any, exists bool)
 }
 ```
+
+`ctx.Set` and `ctx.Get` give access to a key/value store that belongs to one subscription.
+The [`SubscriptionOnEnd`](/router/cosmo-streams/custom-modules/subscription-on-end#values-stored-for-a-subscription) handler receives the same store when the subscription ends.
 
 ## Error Handling
 

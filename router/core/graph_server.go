@@ -1643,6 +1643,7 @@ func (s *graphServer) buildGraphMux(
 		Authorizer:                      NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:        s.subgraphErrorPropagation,
 		EngineLoaderHooks:               loaderHooks,
+		SubscriptionOnEndHandlers:       s.subscriptionHooks.onEnd.handlers,
 		HeaderPropagation:               s.headerPropagation,
 		SSEServerWriteTimeout:           s.engineExecutionConfiguration.SSEServerWriteTimeout,
 	}

@@ -35,6 +35,7 @@ import (
 type subscriptionHooks struct {
 	onCreate             onCreateHooks
 	onStart              onStartHooks
+	onEnd                onEndHooks
 	onPublishEvents      onPublishEventsHooks
 	onReceiveEvents      onReceiveEventsHooks
 	beforeEventsDispatch beforeEventsDispatchHooks
@@ -46,6 +47,10 @@ type onCreateHooks struct {
 
 type onStartHooks struct {
 	handlers []func(ctx SubscriptionOnStartHandlerContext) error
+}
+
+type onEndHooks struct {
+	handlers []func(ctx SubscriptionOnEndHandlerContext)
 }
 
 type onPublishEventsHooks struct {

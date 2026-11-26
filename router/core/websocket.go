@@ -1354,6 +1354,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		_ = rw.Flush()
 		rw.Complete()
 	case *plan.SubscriptionResponsePlan:
+		resolveCtx.OnSubscriptionEnd = newSubscriptionOnEndHook(h.graphqlHandler.subscriptionOnEndHandlers, reqContext)
 		err = h.graphqlHandler.executor.Resolver.AsyncResolveGraphQLSubscription(resolveCtx, p.Response, rw.SubscriptionResponseWriter(), registration.id)
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL subscription", zap.Error(err))
