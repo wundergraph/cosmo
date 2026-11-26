@@ -130,13 +130,22 @@ class Translator {
     return { schema: merged };
   }
 
-  private scalar(type: string, format: string | undefined, property: string): ScalarName | undefined {
+  private scalar(
+    type: string,
+    format: string | undefined,
+    property: string,
+    place: 'field' | 'argument',
+  ): ScalarName | undefined {
     if (type === 'string') {
       return property === 'id' ? 'ID' : 'String';
     }
     if (type === 'integer') {
-      // GraphQL's Int is 32 bits wide.
-      return format === 'int64' ? 'Float' : 'Int';
+      if (format !== 'int64') {
+        return 'Int';
+      }
+      // GraphQL's Int is 32 bits wide and Cosmo Connect has no 64-bit scalar, so the value travels as text. Of the text
+      // types only an ID argument also takes the number a client writes, as in getPetById(petId: 10).
+      return place === 'argument' ? 'ID' : 'String';
     }
     if (type === 'number') {
       return 'Float';
@@ -176,7 +185,7 @@ class Translator {
       return this.translateObject(resolved.schema, pascalName(resolved.name ?? nameHint));
     }
 
-    const scalar = type === undefined ? undefined : this.scalar(type, resolved.schema.format, property);
+    const scalar = type === undefined ? undefined : this.scalar(type, resolved.schema.format, property, 'field');
     if (scalar === undefined) {
       return { unsupported: type === undefined ? 'the schema has no type' : `the type ${type} is not generated` };
     }
@@ -255,7 +264,7 @@ class Translator {
       const scalar =
         'unsupported' in resolved || type === undefined
           ? undefined
-          : this.scalar(type, resolved.schema.format, parameter.name);
+          : this.scalar(type, resolved.schema.format, parameter.name, 'argument');
       const argument = camelName(parameter.name);
 
       if (scalar === undefined || argument === '' || translated.some((other) => other.argument === argument)) {

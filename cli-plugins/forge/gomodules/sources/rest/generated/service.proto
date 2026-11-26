@@ -21,6 +21,7 @@ message QueryCatalogItemResponse {
 message QueryItemsRequest {
   google.protobuf.Int32Value limit = 1;
   google.protobuf.StringValue tag = 2;
+  google.protobuf.DoubleValue min_price = 3;
 }
 // Response message for items operation.
 message QueryItemsResponse {
@@ -31,8 +32,9 @@ message CatalogItem {
   string item_id = 1;
   google.protobuf.StringValue display_name = 2;
   google.protobuf.DoubleValue price = 3;
-  repeated string tags = 4;
-  Warehouse warehouse = 5;
+  google.protobuf.StringValue units_sold = 4;
+  repeated string tags = 5;
+  Warehouse warehouse = 6;
 }
 
 message Warehouse {

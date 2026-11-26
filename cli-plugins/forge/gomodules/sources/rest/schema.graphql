@@ -1,12 +1,13 @@
 type Query {
   catalogItem(id: ID!): CatalogItem
-  items(limit: Int, tag: String): [CatalogItem!]!
+  items(limit: Int, tag: String, minPrice: Float): [CatalogItem!]!
 }
 
 type CatalogItem {
   itemId: String!
   displayName: String
   price: Float
+  unitsSold: String
   tags: [String!]!
   warehouse: Warehouse
 }

@@ -33,6 +33,10 @@ paths:
           in: query
           schema:
             type: string
+        - name: min_price
+          in: query
+          schema:
+            type: number
         - name: ids
           in: query
           schema:
@@ -77,6 +81,9 @@ components:
           type: string
         price:
           type: number
+        units_sold:
+          type: integer
+          format: int64
         tags:
           type: array
           items:

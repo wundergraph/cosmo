@@ -42,6 +42,10 @@
             {
               "original": "tag",
               "mapped": "tag"
+            },
+            {
+              "original": "minPrice",
+              "mapped": "min_price"
             }
           ]
         }
@@ -61,6 +65,10 @@
         {
           "original": "price",
           "mapped": "price"
+        },
+        {
+          "original": "unitsSold",
+          "mapped": "units_sold"
         },
         {
           "original": "tags",

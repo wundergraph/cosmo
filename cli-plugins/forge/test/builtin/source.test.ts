@@ -18,13 +18,14 @@ router:
 
 const sdl = `type Query {
   catalogItem(id: ID!): CatalogItem
-  items(limit: Int, tag: String): [CatalogItem!]!
+  items(limit: Int, tag: String, minPrice: Float): [CatalogItem!]!
 }
 
 type CatalogItem {
   itemId: String!
   displayName: String
   price: Float
+  unitsSold: String
   tags: [String!]!
   warehouse: Warehouse
 }
@@ -115,6 +116,7 @@ describe('wgc forge source add <openapi>', () => {
           parameters: [
             { field: 'limit', name: 'limit', in: 'query' },
             { field: 'tag', name: 'tag', in: 'query' },
+            { field: 'min_price', name: 'min_price', in: 'query' },
           ],
         },
       ],
@@ -123,6 +125,7 @@ describe('wgc forge source add <openapi>', () => {
           item_id: 'item_id',
           display_name: 'display_name',
           price: 'price',
+          units_sold: 'units_sold',
           tags: 'tags',
           warehouse: 'warehouse',
         },
@@ -316,6 +319,57 @@ check:
     expect(await read(workspace, 'modules/catalog-two/generated/service.proto')).toContain('package catalog_two.v1;');
   });
 
+  test('a 32-bit integer is an Int, and a 64-bit integer is an ID argument and a String field', async () => {
+    const workspace = await sourceWorkspace({
+      'openapi.json': JSON.stringify({
+        openapi: '3.0.3',
+        info: { title: 'Pets API' },
+        servers: [{ url: 'https://pets.example.com' }],
+        paths: {
+          '/pet/{petId}': {
+            get: {
+              operationId: 'getPetById',
+              parameters: [{ name: 'petId', in: 'path', required: true, schema: { type: 'integer', format: 'int64' } }],
+              responses: {
+                200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/Pet' } } } },
+              },
+            },
+          },
+        },
+        components: {
+          schemas: {
+            Pet: {
+              type: 'object',
+              required: ['id'],
+              properties: {
+                id: { type: 'integer', format: 'int64' },
+                owner_id: { type: 'integer', format: 'int64' },
+                views: { type: 'integer', format: 'int64' },
+                age: { type: 'integer', format: 'int32' },
+                legs: { type: 'integer' },
+              },
+            },
+          },
+        },
+      }),
+    });
+
+    const run = await runForge(['source', 'add', 'openapi.json'], { workspace });
+
+    expect(JSON.parse(run.stdout).data.subgraph.sdl).toBe(`type Query {
+  getPetById(petId: ID!): Pet
+}
+
+type Pet {
+  id: String!
+  ownerId: String
+  views: String
+  age: Int
+  legs: Int
+}
+`);
+  });
+
   test('translates inline objects, allOf, nullable types and operations without an operationId', async () => {
     const workspace = await sourceWorkspace({
       'openapi.json': JSON.stringify({
@@ -377,7 +431,7 @@ check:
 }
 
 type GetOrdersByOrderIdLinesResponse {
-  totalCount: Float!
+  totalCount: String!
   lines: [OrderLine!]!
 }
 
@@ -419,13 +473,14 @@ describe('wgc forge source add <openapi> --rename', () => {
     const result = JSON.parse(run.stdout).data;
     expect(result.subgraph.sdl).toBe(`type Query {
   item(id: ID!): Product
-  items(limit: Int, tag: String): [Product!]!
+  items(limit: Int, tag: String, minPrice: Float): [Product!]!
 }
 
 type Product {
   itemId: String!
   displayName: String
   price: Float
+  unitsSold: String
   tags: [String!]!
   warehouse: Warehouse
 }
@@ -455,6 +510,7 @@ type Warehouse {
           parameters: [
             { field: 'limit', name: 'limit', in: 'query' },
             { field: 'tag', name: 'tag', in: 'query' },
+            { field: 'min_price', name: 'min_price', in: 'query' },
           ],
         },
       ],
@@ -463,6 +519,7 @@ type Warehouse {
           item_id: 'item_id',
           display_name: 'display_name',
           price: 'price',
+          units_sold: 'units_sold',
           tags: 'tags',
           warehouse: 'warehouse',
         },

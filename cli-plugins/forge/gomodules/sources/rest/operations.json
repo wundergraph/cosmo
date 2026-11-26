@@ -28,6 +28,11 @@
           "field": "tag",
           "name": "tag",
           "in": "query"
+        },
+        {
+          "field": "min_price",
+          "name": "min_price",
+          "in": "query"
         }
       ]
     }
@@ -37,6 +42,7 @@
       "item_id": "item_id",
       "display_name": "display_name",
       "price": "price",
+      "units_sold": "units_sold",
       "tags": "tags",
       "warehouse": "warehouse"
     },
