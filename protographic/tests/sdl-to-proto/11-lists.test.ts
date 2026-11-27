@@ -828,8 +828,6 @@ describe('SDL to Proto Lists', () => {
       "syntax = "proto3";
       package service.v1;
 
-      import "google/protobuf/wrappers.proto";
-
       // Service definition for DefaultService
       service DefaultService {
         rpc MutationBulkUpdate(MutationBulkUpdateRequest) returns (MutationBulkUpdateResponse) {}
@@ -914,7 +912,7 @@ describe('SDL to Proto Lists', () => {
 
       message UpdateUserInput {
         string id = 1;
-        google.protobuf.StringValue name = 2;
+        optional string name = 2;
         ListOfString add_tags = 3;
         ListOfString remove_tags = 4;
       }"
@@ -1459,8 +1457,6 @@ describe('SDL to Proto Lists', () => {
       "syntax = "proto3";
       package service.v1;
 
-      import "google/protobuf/wrappers.proto";
-
       // Service definition for DefaultService
       service DefaultService {
         rpc MutationBulkSearch(MutationBulkSearchRequest) returns (MutationBulkSearchResponse) {}
@@ -1590,7 +1586,7 @@ describe('SDL to Proto Lists', () => {
 
       message TagInput {
         string name = 1;
-        google.protobuf.DoubleValue weight = 2;
+        optional double weight = 2;
       }
 
       message SortInput {
@@ -1599,8 +1595,8 @@ describe('SDL to Proto Lists', () => {
       }
 
       message PaginationInput {
-        google.protobuf.Int32Value limit = 1;
-        google.protobuf.Int32Value offset = 2;
+        optional int32 limit = 1;
+        optional int32 offset = 2;
       }"
     `);
   });
@@ -1671,8 +1667,6 @@ describe('SDL to Proto Lists', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
-
-      import "google/protobuf/wrappers.proto";
 
       // Service definition for DefaultService
       service DefaultService {
@@ -1800,7 +1794,7 @@ describe('SDL to Proto Lists', () => {
       message CategoryInput {
         string id = 1;
         string name = 2;
-        google.protobuf.StringValue parent_id = 3;
+        optional string parent_id = 3;
         ListOfCategoryInput children = 4;
         ListOfCategoryInput optional_children = 5;
         ListOfListOfCategoryInput nested_children = 6;

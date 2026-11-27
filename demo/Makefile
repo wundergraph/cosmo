@@ -2,6 +2,10 @@ SHELL := bash
 wgc_router = pnpm dlx tsx --env-file ../cli/.env ../cli/src/index.ts router
 wgc_router_ci = pnpm dlx tsx ../cli/src/index.ts router
 
+# projects uses proto3 optional fields for nullable scalars (the default).
+# courses keeps the google.protobuf wrapper types, so the router is tested with both formats.
+courses_flags = --legacy-wrapper-types
+
 generate:
 	go generate ./...
 
@@ -15,14 +19,14 @@ bump-deps:
 
 plugin-build:
 	$(wgc_router) plugin build ./pkg/subgraphs/projects --debug --go-module-path github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
-	$(wgc_router) plugin build ./pkg/subgraphs/courses --debug
+	$(wgc_router) plugin build ./pkg/subgraphs/courses --debug $(courses_flags)
 
 plugin-generate:
 	$(wgc_router) plugin build ./pkg/subgraphs/projects --generate-only --go-module-path github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
-	$(wgc_router) plugin build ./pkg/subgraphs/courses --generate-only
+	$(wgc_router) plugin build ./pkg/subgraphs/courses --generate-only $(courses_flags)
 
 plugin-build-ci-bun-binary:
-	$(wgc_router_ci) plugin build ./pkg/subgraphs/courses --yes
+	$(wgc_router_ci) plugin build ./pkg/subgraphs/courses --yes $(courses_flags)
 
 plugin-build-ci-go-binary:
 	$(wgc_router_ci) plugin build ./pkg/subgraphs/projects --yes --go-module-path github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects

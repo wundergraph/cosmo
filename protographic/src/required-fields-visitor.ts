@@ -53,6 +53,14 @@ import { AbstractSelectionRewriter } from './abstract-selection-rewriter.js';
 type RequiredFieldMappings = Record<string, RequiredFieldMapping>;
 
 /**
+ * Options for RequiredFieldsVisitor
+ */
+export type RequiredFieldsVisitorOptions = {
+  /** Use wrapper types instead of proto3 optional for nullable scalars. The default is false. */
+  useWrapperTypes?: boolean;
+};
+
+/**
  * Represents the mapping configuration for a single @requires field.
  * This mapping is keyed by the @key directive fields string.
  */
@@ -137,6 +145,7 @@ export class RequiredFieldsVisitor {
     private readonly objectType: GraphQLObjectType,
     private readonly requiredField: GraphQLField<any, any, any>,
     fieldSet: string,
+    private readonly options: RequiredFieldsVisitorOptions = {},
   ) {
     this.currentType = objectType;
     this.resolveKeyDirectives();
@@ -232,6 +241,20 @@ export class RequiredFieldsVisitor {
    */
   public get nestedListWrappers(): Map<string, string> {
     return this._nestedListWrappers;
+  }
+
+  /**
+   * Maps a GraphQL type to its protobuf type and tracks the wrapper types and
+   * list wrapper messages it uses, so the caller can include them in the final proto output.
+   */
+  private getProtoType(graphqlType: GraphQLType): ProtoFieldType {
+    const protoType = getProtoTypeFromGraphQL(false, graphqlType, { useWrapperTypes: this.options.useWrapperTypes });
+    if (protoType.isWrapper) {
+      this._usesWrapperTypes = true;
+    }
+
+    this.trackListWrapper(protoType);
+    return protoType;
   }
 
   /**
@@ -397,16 +420,13 @@ export class RequiredFieldsVisitor {
       const requireArgsMessage: ProtoMessage = {
         messageName: requireArgsMessageName,
         fields: this.requiredField.args.map((d, i): ProtoMessageField => {
-          const protoType = getProtoTypeFromGraphQL(false, d.type);
-          if (protoType.isWrapper) {
-            this._usesWrapperTypes = true;
-          }
-          this.trackListWrapper(protoType);
+          const protoType = this.getProtoType(d.type);
           return {
             fieldName: graphqlArgumentToProtoField(d.name),
             typeName: protoType.typeName,
             fieldNumber: i + 1,
             isRepeated: protoType.isRepeated,
+            isOptional: protoType.isOptional,
           };
         }),
       };
@@ -437,8 +457,7 @@ export class RequiredFieldsVisitor {
     });
 
     // Get the type name from the required field
-    const typeInfo = getProtoTypeFromGraphQL(false, this.requiredField.type);
-    this.trackListWrapper(typeInfo);
+    const typeInfo = this.getProtoType(this.requiredField.type);
 
     this.messageDefinitions.push({
       messageName: resultMessageName,
@@ -448,6 +467,7 @@ export class RequiredFieldsVisitor {
           typeName: typeInfo.typeName,
           fieldNumber: 1,
           isRepeated: typeInfo.isRepeated,
+          isOptional: typeInfo.isOptional,
         },
       ],
     });
@@ -485,13 +505,13 @@ export class RequiredFieldsVisitor {
       return;
     }
 
-    const typeInfo = getProtoTypeFromGraphQL(false, fieldDefinition.type);
-    this.trackListWrapper(typeInfo);
+    const typeInfo = this.getProtoType(fieldDefinition.type);
     this.current.fields.push({
       fieldName: protoFieldName,
       typeName: typeInfo.typeName,
       fieldNumber: this.current?.fields.length + 1,
       isRepeated: typeInfo.isRepeated,
+      isOptional: typeInfo.isOptional,
       graphqlName: fieldDefinition.name,
       compositeType,
     });

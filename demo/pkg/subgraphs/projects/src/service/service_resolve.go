@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 	service "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/data"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // ResolveProjectCriticalDeadline implements projects.ProjectsServiceServer.
@@ -25,7 +24,7 @@ func (p *ProjectsService) ResolveProjectCriticalDeadline(_ context.Context, req 
 	// Default to 30 days if not specified
 	withinDays := 30
 	if req.FieldArgs != nil && req.FieldArgs.WithinDays != nil {
-		withinDays = int(req.FieldArgs.WithinDays.Value)
+		withinDays = int(*req.FieldArgs.WithinDays)
 	}
 
 	for _, context := range req.Context {
@@ -46,7 +45,7 @@ func (p *ProjectsService) ResolveProjectCriticalDeadline(_ context.Context, req 
 			}
 
 			if milestone.EndDate != nil {
-				endDate, err := time.Parse("2006-01-02", milestone.EndDate.Value)
+				endDate, err := time.Parse("2006-01-02", *milestone.EndDate)
 				if err == nil {
 					daysUntil := int(math.Abs(endDate.Sub(now).Hours() / 24))
 					// Check if it's within our window and closer than what we've found
@@ -70,7 +69,7 @@ func (p *ProjectsService) ResolveProjectCriticalDeadline(_ context.Context, req 
 			if context.Status != service.ProjectStatus_PROJECT_STATUS_COMPLETED {
 				project := data.GetProjectByID(context.Id)
 				if project != nil && project.EndDate != nil {
-					endDate, err := time.Parse("2006-01-02", project.EndDate.Value)
+					endDate, err := time.Parse("2006-01-02", *project.EndDate)
 					if err == nil {
 						daysUntil := int(math.Abs(endDate.Sub(now).Hours() / 24))
 						if daysUntil >= 0 && daysUntil <= withinDays {
@@ -111,7 +110,7 @@ func (p *ProjectsService) ResolveProjectTopPriorityItem(ctx context.Context, req
 		// Filter by category if provided
 		category := ""
 		if req.FieldArgs != nil && req.FieldArgs.Category != nil {
-			category = strings.ToLower(req.FieldArgs.Category.Value)
+			category = strings.ToLower(*req.FieldArgs.Category)
 		}
 
 		// Check for highest priority task if category allows
@@ -200,11 +199,11 @@ func (p *ProjectsService) ResolveEmployeeAverageTaskCompletionDays(ctx context.C
 
 		// Find completed tasks for this employee
 		for _, task := range data.ServiceTasks {
-			if task.AssigneeId != nil && task.AssigneeId.Value == employeeID {
+			if task.AssigneeId != nil && *task.AssigneeId == employeeID {
 				// Filter by project if specified
 				matchesProject := true
 				if req.FieldArgs != nil && req.FieldArgs.ProjectId != nil {
-					matchesProject = task.ProjectId == req.FieldArgs.ProjectId.Value
+					matchesProject = task.ProjectId == *req.FieldArgs.ProjectId
 				}
 
 				// Filter by priority if specified
@@ -217,8 +216,8 @@ func (p *ProjectsService) ResolveEmployeeAverageTaskCompletionDays(ctx context.C
 				if matchesProject && matchesPriority &&
 					task.Status == service.TaskStatus_TASK_STATUS_COMPLETED &&
 					task.CreatedAt != nil && task.CompletedAt != nil {
-					createdAt, err1 := time.Parse(time.RFC3339, task.CreatedAt.Value)
-					completedAt, err2 := time.Parse(time.RFC3339, task.CompletedAt.Value)
+					createdAt, err1 := time.Parse(time.RFC3339, *task.CreatedAt)
+					completedAt, err2 := time.Parse(time.RFC3339, *task.CompletedAt)
 					if err1 == nil && err2 == nil {
 						days := completedAt.Sub(createdAt).Hours() / 24
 						totalDays += days
@@ -228,9 +227,9 @@ func (p *ProjectsService) ResolveEmployeeAverageTaskCompletionDays(ctx context.C
 			}
 		}
 
-		var averageDays *wrapperspb.DoubleValue
+		var averageDays *float64
 		if taskCount > 0 {
-			averageDays = &wrapperspb.DoubleValue{Value: totalDays / float64(taskCount)}
+			averageDays = new(totalDays / float64(taskCount))
 		}
 
 		response.Result = append(response.Result, &service.ResolveEmployeeAverageTaskCompletionDaysResult{
@@ -256,17 +255,17 @@ func (p *ProjectsService) ResolveEmployeeCurrentWorkload(ctx context.Context, re
 
 		// Count tasks assigned to this employee
 		for _, task := range data.ServiceTasks {
-			if task.AssigneeId != nil && task.AssigneeId.Value == employeeID {
+			if task.AssigneeId != nil && *task.AssigneeId == employeeID {
 				// Check if we should include completed tasks
 				includeCompleted := false
 				if req.FieldArgs != nil && req.FieldArgs.IncludeCompleted != nil {
-					includeCompleted = req.FieldArgs.IncludeCompleted.Value
+					includeCompleted = *req.FieldArgs.IncludeCompleted
 				}
 
 				// Filter by project if specified
 				matchesProject := true
 				if req.FieldArgs != nil && req.FieldArgs.ProjectId != nil {
-					matchesProject = task.ProjectId == req.FieldArgs.ProjectId.Value
+					matchesProject = task.ProjectId == *req.FieldArgs.ProjectId
 				}
 
 				if matchesProject {
@@ -298,18 +297,18 @@ func (p *ProjectsService) ResolveMilestoneDaysUntilDue(ctx context.Context, req 
 		// Use fromDate if provided, otherwise use current date
 		fromDate := time.Now()
 		if req.FieldArgs != nil && req.FieldArgs.FromDate != nil {
-			parsedDate, err := time.Parse("2006-01-02", req.FieldArgs.FromDate.Value)
+			parsedDate, err := time.Parse("2006-01-02", *req.FieldArgs.FromDate)
 			if err == nil {
 				fromDate = parsedDate
 			}
 		}
 
-		var daysUntilDue *wrapperspb.Int32Value
+		var daysUntilDue *int32
 		if context.EndDate != nil {
-			endDate, err := time.Parse("2006-01-02", context.EndDate.Value)
+			endDate, err := time.Parse("2006-01-02", *context.EndDate)
 			if err == nil {
 				days := int32(endDate.Sub(fromDate).Hours() / 24)
-				daysUntilDue = &wrapperspb.Int32Value{Value: days}
+				daysUntilDue = new(days)
 			}
 		}
 
@@ -333,7 +332,7 @@ func (p *ProjectsService) ResolveMilestoneIsAtRisk(ctx context.Context, req *ser
 	// Default threshold is 70% - if completion is below this and status is not completed, it's at risk
 	threshold := 70.0
 	if req.FieldArgs != nil && req.FieldArgs.Threshold != nil {
-		threshold = req.FieldArgs.Threshold.Value
+		threshold = *req.FieldArgs.Threshold
 	}
 
 	for _, context := range req.Context {
@@ -344,10 +343,10 @@ func (p *ProjectsService) ResolveMilestoneIsAtRisk(ctx context.Context, req *ser
 			isAtRisk = true
 		} else if context.Status != service.MilestoneStatus_MILESTONE_STATUS_COMPLETED {
 			// Check if completion percentage is below threshold
-			if context.CompletionPercentage != nil && context.CompletionPercentage.Value < threshold {
+			if context.CompletionPercentage != nil && *context.CompletionPercentage < threshold {
 				// Also check if we're close to or past the end date
 				if context.EndDate != nil {
-					endDate, err := time.Parse("2006-01-02", context.EndDate.Value)
+					endDate, err := time.Parse("2006-01-02", *context.EndDate)
 					if err == nil {
 						daysUntilDue := time.Until(endDate).Hours() / 24
 						// If less than 7 days remaining and not on track, it's at risk
@@ -418,18 +417,18 @@ func (p *ProjectsService) ResolveProjectEstimatedDaysRemaining(ctx context.Conte
 		// Use fromDate if provided, otherwise use current date
 		fromDate := time.Now()
 		if req.FieldArgs != nil && req.FieldArgs.FromDate != nil {
-			parsedDate, err := time.Parse("2006-01-02", req.FieldArgs.FromDate.Value)
+			parsedDate, err := time.Parse("2006-01-02", *req.FieldArgs.FromDate)
 			if err == nil {
 				fromDate = parsedDate
 			}
 		}
 
-		var daysRemaining *wrapperspb.Int32Value
+		var daysRemaining *int32
 		if context.EndDate != nil {
-			endDate, err := time.Parse("2006-01-02", context.EndDate.Value)
+			endDate, err := time.Parse("2006-01-02", *context.EndDate)
 			if err == nil {
 				days := int32(endDate.Sub(fromDate).Hours() / 24)
-				daysRemaining = &wrapperspb.Int32Value{Value: days}
+				daysRemaining = new(days)
 			}
 		}
 
@@ -476,8 +475,8 @@ func (p *ProjectsService) ResolveProjectFilteredTasks(ctx context.Context, req *
 		}
 
 		// Apply limit if provided
-		if req.FieldArgs != nil && req.FieldArgs.Limit != nil && req.FieldArgs.Limit.Value > 0 {
-			limit := int(req.FieldArgs.Limit.Value)
+		if req.FieldArgs != nil && req.FieldArgs.Limit != nil && *req.FieldArgs.Limit > 0 {
+			limit := int(*req.FieldArgs.Limit)
 			if len(tasks) > limit {
 				tasks = tasks[:limit]
 			}
@@ -510,7 +509,7 @@ func (p *ProjectsService) ResolveTaskIsBlocked(ctx context.Context, req *service
 		}
 
 		// If checkDependencies is true, also check if any dependencies are not completed
-		if req.FieldArgs != nil && req.FieldArgs.CheckDependencies != nil && req.FieldArgs.CheckDependencies.Value {
+		if req.FieldArgs != nil && req.FieldArgs.CheckDependencies != nil && *req.FieldArgs.CheckDependencies {
 			// For demo purposes, we'll check the task's dependencies field
 			// In a real implementation, you'd look up the actual dependency tasks
 			// and check their status
@@ -543,31 +542,31 @@ func (p *ProjectsService) ResolveTaskTotalEffort(ctx context.Context, req *servi
 	}
 
 	for _, context := range req.Context {
-		var totalEffort *wrapperspb.DoubleValue
+		var totalEffort *float64
 
 		// Calculate total effort as actual hours if available, otherwise estimated hours
 		if context.ActualHours != nil {
-			totalEffort = &wrapperspb.DoubleValue{Value: context.ActualHours.Value}
+			totalEffort = new(*context.ActualHours)
 		} else if context.EstimatedHours != nil {
-			totalEffort = &wrapperspb.DoubleValue{Value: context.EstimatedHours.Value}
+			totalEffort = new(*context.EstimatedHours)
 		}
 
 		// If includeSubtasks is true, add subtask effort
-		if req.FieldArgs != nil && req.FieldArgs.IncludeSubtasks != nil && req.FieldArgs.IncludeSubtasks.Value {
+		if req.FieldArgs != nil && req.FieldArgs.IncludeSubtasks != nil && *req.FieldArgs.IncludeSubtasks {
 			task := data.GetTaskByID(context.Id)
 			if task != nil && task.Subtasks != nil && task.Subtasks.List != nil {
 				for _, subtask := range task.Subtasks.List.Items {
 					if subtask != nil {
 						var subtaskEffort float64
 						if subtask.ActualHours != nil {
-							subtaskEffort = subtask.ActualHours.Value
+							subtaskEffort = *subtask.ActualHours
 						} else if subtask.EstimatedHours != nil {
-							subtaskEffort = subtask.EstimatedHours.Value
+							subtaskEffort = *subtask.EstimatedHours
 						}
 						if totalEffort == nil {
-							totalEffort = &wrapperspb.DoubleValue{Value: subtaskEffort}
+							totalEffort = new(subtaskEffort)
 						} else {
-							totalEffort.Value += subtaskEffort
+							*totalEffort += subtaskEffort
 						}
 					}
 				}
@@ -668,7 +667,7 @@ func (p *ProjectsService) ResolveProjectSubProjects(_ context.Context, req *serv
 	// Check if archived projects should be included (defaults to true if not specified)
 	includeArchived := true
 	if req.FieldArgs != nil && req.FieldArgs.IncludeArchived != nil {
-		includeArchived = req.FieldArgs.IncludeArchived.Value
+		includeArchived = *req.FieldArgs.IncludeArchived
 	}
 
 	// Define parent-to-subproject relationships using actual project IDs

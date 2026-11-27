@@ -33,16 +33,9 @@ import {
 
 import type {
   ArgumentMapping,
-  EntityMapping,
-  EnumMapping,
-  EnumValueMapping,
   FieldMapping,
   GRPCMapping,
   LookupFieldMapping,
-  LookupMapping,
-  OperationMapping,
-  RequiredFieldMapping,
-  TypeFieldMapping,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 import { Maybe } from 'graphql/jsutils/Maybe.js';

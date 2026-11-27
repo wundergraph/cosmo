@@ -14,6 +14,7 @@ service CoursesService {
   rpc QueryKillCoursesService(QueryKillCoursesServiceRequest) returns (QueryKillCoursesServiceResponse) {}
   rpc QueryLessons(QueryLessonsRequest) returns (QueryLessonsResponse) {}
   rpc QueryThrowErrorCourses(QueryThrowErrorCoursesRequest) returns (QueryThrowErrorCoursesResponse) {}
+  rpc ResolveCourseDescriptionPreview(ResolveCourseDescriptionPreviewRequest) returns (ResolveCourseDescriptionPreviewResponse) {}
 }
 
 // Key message for Employee entity lookup
@@ -105,6 +106,29 @@ message MutationAddLessonRequest {
 // Response message for addLesson operation.
 message MutationAddLessonResponse {
   Lesson add_lesson = 1;
+}
+message ResolveCourseDescriptionPreviewArgs {
+  google.protobuf.Int32Value max_length = 1;
+}
+
+message ResolveCourseDescriptionPreviewContext {
+  string id = 1;
+  google.protobuf.StringValue description = 2;
+}
+
+message ResolveCourseDescriptionPreviewRequest {
+  // context provides the resolver context for the field descriptionPreview of type Course.
+  repeated ResolveCourseDescriptionPreviewContext context = 1;
+  // field_args provides the arguments for the resolver field descriptionPreview of type Course.
+  ResolveCourseDescriptionPreviewArgs field_args = 2;
+}
+
+message ResolveCourseDescriptionPreviewResult {
+  google.protobuf.StringValue description_preview = 1;
+}
+
+message ResolveCourseDescriptionPreviewResponse {
+  repeated ResolveCourseDescriptionPreviewResult result = 1;
 }
 
 message Employee {

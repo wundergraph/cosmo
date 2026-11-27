@@ -29,6 +29,10 @@ type Course {
   
   # Course lessons
   lessons: [Lesson!]!
+
+  # The first maxLength characters of the description. Null when the course has no description.
+  # A null maxLength gives the full description.
+  descriptionPreview(maxLength: Int): String @connect__fieldResolver(context: "id description")
 }
 
 type Lesson {

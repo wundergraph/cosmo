@@ -872,8 +872,6 @@ describe('SDL to Proto Field Arguments', () => {
       "syntax = "proto3";
       package service.v1;
 
-      import "google/protobuf/wrappers.proto";
-
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryCategories(QueryCategoriesRequest) returns (QueryCategoriesResponse) {}
@@ -920,10 +918,10 @@ describe('SDL to Proto Field Arguments', () => {
       }
 
       message ProductCountFilter {
-        google.protobuf.DoubleValue min_price = 1;
-        google.protobuf.DoubleValue max_price = 2;
-        google.protobuf.BoolValue in_stock = 3;
-        google.protobuf.StringValue search_term = 4;
+        optional double min_price = 1;
+        optional double max_price = 2;
+        optional bool in_stock = 3;
+        optional string search_term = 4;
       }"
     `);
   });

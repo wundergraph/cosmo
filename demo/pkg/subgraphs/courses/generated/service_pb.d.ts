@@ -364,6 +364,128 @@ export namespace MutationAddLessonResponse {
     }
 }
 
+export class ResolveCourseDescriptionPreviewArgs extends jspb.Message { 
+
+    hasMaxLength(): boolean;
+    clearMaxLength(): void;
+    getMaxLength(): google_protobuf_wrappers_pb.Int32Value | undefined;
+    setMaxLength(value?: google_protobuf_wrappers_pb.Int32Value): ResolveCourseDescriptionPreviewArgs;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): ResolveCourseDescriptionPreviewArgs.AsObject;
+    static toObject(includeInstance: boolean, msg: ResolveCourseDescriptionPreviewArgs): ResolveCourseDescriptionPreviewArgs.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: ResolveCourseDescriptionPreviewArgs, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): ResolveCourseDescriptionPreviewArgs;
+    static deserializeBinaryFromReader(message: ResolveCourseDescriptionPreviewArgs, reader: jspb.BinaryReader): ResolveCourseDescriptionPreviewArgs;
+}
+
+export namespace ResolveCourseDescriptionPreviewArgs {
+    export type AsObject = {
+        maxLength?: google_protobuf_wrappers_pb.Int32Value.AsObject,
+    }
+}
+
+export class ResolveCourseDescriptionPreviewContext extends jspb.Message { 
+    getId(): string;
+    setId(value: string): ResolveCourseDescriptionPreviewContext;
+
+    hasDescription(): boolean;
+    clearDescription(): void;
+    getDescription(): google_protobuf_wrappers_pb.StringValue | undefined;
+    setDescription(value?: google_protobuf_wrappers_pb.StringValue): ResolveCourseDescriptionPreviewContext;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): ResolveCourseDescriptionPreviewContext.AsObject;
+    static toObject(includeInstance: boolean, msg: ResolveCourseDescriptionPreviewContext): ResolveCourseDescriptionPreviewContext.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: ResolveCourseDescriptionPreviewContext, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): ResolveCourseDescriptionPreviewContext;
+    static deserializeBinaryFromReader(message: ResolveCourseDescriptionPreviewContext, reader: jspb.BinaryReader): ResolveCourseDescriptionPreviewContext;
+}
+
+export namespace ResolveCourseDescriptionPreviewContext {
+    export type AsObject = {
+        id: string,
+        description?: google_protobuf_wrappers_pb.StringValue.AsObject,
+    }
+}
+
+export class ResolveCourseDescriptionPreviewRequest extends jspb.Message { 
+    clearContextList(): void;
+    getContextList(): Array<ResolveCourseDescriptionPreviewContext>;
+    setContextList(value: Array<ResolveCourseDescriptionPreviewContext>): ResolveCourseDescriptionPreviewRequest;
+    addContext(value?: ResolveCourseDescriptionPreviewContext, index?: number): ResolveCourseDescriptionPreviewContext;
+
+    hasFieldArgs(): boolean;
+    clearFieldArgs(): void;
+    getFieldArgs(): ResolveCourseDescriptionPreviewArgs | undefined;
+    setFieldArgs(value?: ResolveCourseDescriptionPreviewArgs): ResolveCourseDescriptionPreviewRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): ResolveCourseDescriptionPreviewRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: ResolveCourseDescriptionPreviewRequest): ResolveCourseDescriptionPreviewRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: ResolveCourseDescriptionPreviewRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): ResolveCourseDescriptionPreviewRequest;
+    static deserializeBinaryFromReader(message: ResolveCourseDescriptionPreviewRequest, reader: jspb.BinaryReader): ResolveCourseDescriptionPreviewRequest;
+}
+
+export namespace ResolveCourseDescriptionPreviewRequest {
+    export type AsObject = {
+        contextList: Array<ResolveCourseDescriptionPreviewContext.AsObject>,
+        fieldArgs?: ResolveCourseDescriptionPreviewArgs.AsObject,
+    }
+}
+
+export class ResolveCourseDescriptionPreviewResult extends jspb.Message { 
+
+    hasDescriptionPreview(): boolean;
+    clearDescriptionPreview(): void;
+    getDescriptionPreview(): google_protobuf_wrappers_pb.StringValue | undefined;
+    setDescriptionPreview(value?: google_protobuf_wrappers_pb.StringValue): ResolveCourseDescriptionPreviewResult;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): ResolveCourseDescriptionPreviewResult.AsObject;
+    static toObject(includeInstance: boolean, msg: ResolveCourseDescriptionPreviewResult): ResolveCourseDescriptionPreviewResult.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: ResolveCourseDescriptionPreviewResult, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): ResolveCourseDescriptionPreviewResult;
+    static deserializeBinaryFromReader(message: ResolveCourseDescriptionPreviewResult, reader: jspb.BinaryReader): ResolveCourseDescriptionPreviewResult;
+}
+
+export namespace ResolveCourseDescriptionPreviewResult {
+    export type AsObject = {
+        descriptionPreview?: google_protobuf_wrappers_pb.StringValue.AsObject,
+    }
+}
+
+export class ResolveCourseDescriptionPreviewResponse extends jspb.Message { 
+    clearResultList(): void;
+    getResultList(): Array<ResolveCourseDescriptionPreviewResult>;
+    setResultList(value: Array<ResolveCourseDescriptionPreviewResult>): ResolveCourseDescriptionPreviewResponse;
+    addResult(value?: ResolveCourseDescriptionPreviewResult, index?: number): ResolveCourseDescriptionPreviewResult;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): ResolveCourseDescriptionPreviewResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: ResolveCourseDescriptionPreviewResponse): ResolveCourseDescriptionPreviewResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: ResolveCourseDescriptionPreviewResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): ResolveCourseDescriptionPreviewResponse;
+    static deserializeBinaryFromReader(message: ResolveCourseDescriptionPreviewResponse, reader: jspb.BinaryReader): ResolveCourseDescriptionPreviewResponse;
+}
+
+export namespace ResolveCourseDescriptionPreviewResponse {
+    export type AsObject = {
+        resultList: Array<ResolveCourseDescriptionPreviewResult.AsObject>,
+    }
+}
+
 export class Employee extends jspb.Message { 
     getId(): number;
     setId(value: number): Employee;

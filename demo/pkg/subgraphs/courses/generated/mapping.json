@@ -159,6 +159,16 @@
         {
           "original": "lessons",
           "mapped": "lessons"
+        },
+        {
+          "original": "descriptionPreview",
+          "mapped": "description_preview",
+          "argumentMappings": [
+            {
+              "original": "maxLength",
+              "mapped": "max_length"
+            }
+          ]
         }
       ]
     },
@@ -203,6 +213,27 @@
           "mapped": "taught_courses"
         }
       ]
+    }
+  ],
+  "resolveMappings": [
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Course",
+        "fieldMapping": {
+          "original": "descriptionPreview",
+          "mapped": "description_preview",
+          "argumentMappings": [
+            {
+              "original": "maxLength",
+              "mapped": "max_length"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveCourseDescriptionPreview",
+      "request": "ResolveCourseDescriptionPreviewRequest",
+      "response": "ResolveCourseDescriptionPreviewResponse"
     }
   ]
 }
