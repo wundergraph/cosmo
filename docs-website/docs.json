@@ -31,7 +31,7 @@
     "dismissible": false
   },
   "contextual": {
-    "options": ["copy", "view", "chatgpt", "claude"]
+    "options": ["copy", "view", "chatgpt", "claude", "mcp", "add-mcp", "cursor", "vscode"]
   },
   "navigation": {
     "tabs": [
