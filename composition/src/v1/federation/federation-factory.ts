@@ -119,6 +119,7 @@ import {
   type SubscriptionFieldCondition,
   type SubscriptionFilterValue,
 } from '../../router-configuration/types';
+import { newConfigurationData } from '../../router-configuration/utils';
 import { BASE_SCALARS, DIRECTIVE_DEFINITION_BY_NAME, MAX_OR_SCOPES } from '../constants/constants';
 import { FEDERATED_DIRECTIVE_DATAS, isNodeQuery } from '../normalization/utils';
 import {
@@ -1954,31 +1955,31 @@ export class FederationFactory {
           // The subgraph locations of the Interface Object must be added to the concrete types that implement it
           const entityData = getOrThrowError(this.entityDataByTypeName, concreteTypeName, 'entityDataByTypeName');
           entityData.subgraphNames.add(subgraphName);
-          const configurationData = configurationDataByTypeName.get(concreteTypeName);
-          if (configurationData) {
+          const concreteTypeConfiguration = getValueOrDefault(configurationDataByTypeName, concreteTypeName, () =>
+            newConfigurationData(true, concreteTypeName),
+          );
+          addIterableToSet({
+            source: interfaceObjectConfiguration.fieldNames,
+            target: concreteTypeConfiguration.fieldNames,
+          });
+          if (interfaceObjectConfiguration.externalFieldNames) {
+            concreteTypeConfiguration.externalFieldNames ??= new Set<FieldName>();
             addIterableToSet({
-              source: interfaceObjectConfiguration.fieldNames,
-              target: configurationData.fieldNames,
+              source: interfaceObjectConfiguration.externalFieldNames,
+              target: concreteTypeConfiguration.externalFieldNames,
             });
-            if (!configurationData.keys) {
-              configurationData.keys = [...keys];
-            } else {
-              parentLoop: for (const key of keys) {
-                for (const { selectionSet } of configurationData.keys) {
-                  if (key.selectionSet === selectionSet) {
-                    continue parentLoop;
-                  }
-                }
-                configurationData.keys.push(key);
-              }
-            }
+          }
+          if (!concreteTypeConfiguration.keys) {
+            concreteTypeConfiguration.keys = [...keys];
           } else {
-            configurationDataByTypeName.set(concreteTypeName, {
-              fieldNames: new Set<string>(interfaceObjectConfiguration.fieldNames),
-              isRootNode: true,
-              keys: [...keys],
-              typeName: concreteTypeName,
-            });
+            const existingKeys = new Set(concreteTypeConfiguration.keys.map((key) => key.selectionSet));
+            for (const key of keys) {
+              if (existingKeys.has(key.selectionSet)) {
+                continue;
+              }
+              concreteTypeConfiguration.keys.push(key);
+              existingKeys.add(key.selectionSet);
+            }
           }
           const resolvableKeyFieldSets = new Set<string>();
           for (const key of keys.filter((k) => !k.disableEntityResolver)) {

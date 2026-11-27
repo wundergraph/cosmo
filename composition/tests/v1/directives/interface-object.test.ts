@@ -673,6 +673,67 @@ describe('@interfaceObject tests', () => {
     );
   });
 
+  test('that the router configuration merges keys and @external fields from Interface Objects for each concrete type', () => {
+    const accounts = createSubgraph(
+      'accounts',
+      `
+        type Query {
+          users: [User!]!
+        }
+
+        interface User @key(fields: "id") @key(fields: "handle") {
+          id: ID!
+          handle: ID!
+        }
+
+        interface Account @key(fields: "accountId") @key(fields: "handle") {
+          accountId: ID!
+          handle: ID!
+        }
+
+        type Admin implements User & Account @key(fields: "id") @key(fields: "accountId") @key(fields: "handle") {
+          id: ID!
+          accountId: ID!
+          handle: ID!
+        }
+
+        type Member implements User @key(fields: "id") @key(fields: "handle") {
+          id: ID!
+          handle: ID!
+        }
+      `,
+    );
+    const profiles = createSubgraph(
+      'profiles',
+      `
+        type User @key(fields: "id") @key(fields: "handle") @interfaceObject {
+          id: ID! @external
+          handle: ID!
+        }
+
+        type Account @key(fields: "accountId") @key(fields: "handle") @interfaceObject {
+          accountId: ID! @external
+          handle: ID!
+        }
+      `,
+    );
+
+    const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
+      [accounts, profiles],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    const profilesConfig = subgraphConfigBySubgraphName.get(profiles.name);
+    const adminConfig = profilesConfig?.configurationDataByTypeName.get('Admin');
+    const memberConfig = profilesConfig?.configurationDataByTypeName.get('Member');
+
+    expect(adminConfig?.keys?.map((key) => key.selectionSet).sort()).toStrictEqual(['accountId', 'handle', 'id']);
+    expect(adminConfig?.externalFieldNames).toStrictEqual(new Set(['id', 'accountId']));
+    expect(adminConfig?.fieldNames).toStrictEqual(new Set(['handle']));
+    expect(memberConfig?.keys?.map((key) => key.selectionSet).sort()).toStrictEqual(['handle', 'id']);
+    expect(memberConfig?.externalFieldNames).toStrictEqual(new Set(['id']));
+    expect(memberConfig?.fieldNames).toStrictEqual(new Set(['handle']));
+  });
+
   test('that @external fields to satisfy an entity Interface are propagated from Interface Object to implementations', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([fda, fdb], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
