@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { assert, describe, expect, test } from 'vitest';
 import { create } from '@bufbuild/protobuf';
 import { LATEST_ROUTER_COMPATIBILITY_VERSION, Subgraph } from '@wundergraph/composition';
 import {
@@ -26,23 +26,26 @@ describe('Entity caching configuration tests', () => {
       ),
     ]);
     // @cacheTag alone must produce the EntityCachingConfiguration.
-    expect(routerConfig.engineConfig?.datasourceConfigurations[0].entityCachingConfiguration).toStrictEqual(
-      create(EntityCachingConfigurationSchema, {
-        cacheTagConfigurations: [
-          create(CacheTagConfigurationSchema, {
-            typeName: 'Query',
-            fieldName: 'product',
-            format: 'product-{$args.id}',
-          }),
-          create(CacheTagConfigurationSchema, { typeName: 'Query', fieldName: 'product', format: 'products' }),
-          create(CacheTagConfigurationSchema, {
-            typeName: 'Query',
-            fieldName: 'products',
-            format: 'products',
-          }),
-        ],
-      }),
-    );
+    assert.isOk(routerConfig.engineConfig);
+    expect(routerConfig.engineConfig.datasourceConfigurations).toMatchObject([
+      {
+        entityCachingConfiguration: create(EntityCachingConfigurationSchema, {
+          cacheTagConfigurations: [
+            create(CacheTagConfigurationSchema, {
+              typeName: 'Query',
+              fieldName: 'product',
+              format: 'product-{$args.id}',
+            }),
+            create(CacheTagConfigurationSchema, { typeName: 'Query', fieldName: 'product', format: 'products' }),
+            create(CacheTagConfigurationSchema, {
+              typeName: 'Query',
+              fieldName: 'products',
+              format: 'products',
+            }),
+          ],
+        }),
+      },
+    ]);
   });
 
   test('that a CacheTagConfiguration is produced for each @cacheTag format upon an entity', () => {
@@ -61,14 +64,17 @@ describe('Entity caching configuration tests', () => {
       ),
     ]);
     // @cacheTag upon an entity alone must produce the EntityCachingConfiguration.
-    expect(routerConfig.engineConfig?.datasourceConfigurations[0].entityCachingConfiguration).toStrictEqual(
-      create(EntityCachingConfigurationSchema, {
-        cacheTagConfigurations: [
-          create(CacheTagConfigurationSchema, { typeName: 'Product', format: 'product-{$key.id}' }),
-          create(CacheTagConfigurationSchema, { typeName: 'Product', format: 'products' }),
-        ],
-      }),
-    );
+    assert.isOk(routerConfig.engineConfig);
+    expect(routerConfig.engineConfig.datasourceConfigurations).toMatchObject([
+      {
+        entityCachingConfiguration: create(EntityCachingConfigurationSchema, {
+          cacheTagConfigurations: [
+            create(CacheTagConfigurationSchema, { typeName: 'Product', format: 'product-{$key.id}' }),
+            create(CacheTagConfigurationSchema, { typeName: 'Product', format: 'products' }),
+          ],
+        }),
+      },
+    ]);
   });
 });
 
