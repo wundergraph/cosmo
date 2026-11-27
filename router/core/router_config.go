@@ -129,6 +129,7 @@ type Config struct {
 	routerMiddlewares               []func(http.Handler) http.Handler
 	preOriginHandlers               []TransportPreHandler
 	postOriginHandlers              []TransportPostHandler
+	subgraphDialerProviders         []SubgraphDialerProvider
 	headerRules                     *config.HeaderRules
 	subgraphTransportOptions        *SubgraphTransportOptions
 	subgraphCircuitBreakerOptions   *SubgraphCircuitBreakerOptions

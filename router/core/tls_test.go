@@ -465,8 +465,8 @@ func TestNewHTTPTransport(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		first := newHTTPTransport(&TransportRequestOptions{}, nil, nil, "", cfg)
-		second := newHTTPTransport(&TransportRequestOptions{}, nil, nil, "", cfg)
+		first := newHTTPTransport(&TransportRequestOptions{}, nil, nil, "", cfg, nil)
+		second := newHTTPTransport(&TransportRequestOptions{}, nil, nil, "", cfg, nil)
 		require.NotSame(t, cfg, first.TLSClientConfig)
 		require.NotSame(t, first.TLSClientConfig, second.TLSClientConfig)
 		first.TLSClientConfig.NextProtos = []string{"h2"}

@@ -156,6 +156,15 @@ type SpanNameFormatterProvider interface {
 	WrapSpanNameFormatter(next SpanNameFormatterFunc) SpanNameFormatterFunc
 }
 
+// SubgraphDialerProvider wraps the dialer when the router builds a subgraph HTTP
+// transport. An empty subgraph identifies the shared default transport. Modules
+// compose in priority order, with the first module outermost. Return next to
+// leave a transport's dialer unchanged. The returned dialer must be safe for
+// concurrent calls and should delegate to next to retain the router's dial settings.
+type SubgraphDialerProvider interface {
+	WrapSubgraphDialer(subgraph string, next DialerFunc) DialerFunc
+}
+
 // Provisioner is called before the server starts
 // It allows you to initialize your module, e.g., create a database connection
 // or load a configuration file.
