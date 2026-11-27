@@ -555,13 +555,6 @@ export const CachePopulateConfigurationSchema: GenMessage<CachePopulateConfigura
 
 /**
  * Per-Query-field or per-entity declaration for @cacheTag, one per distinct format.
- * The format is literal text with placeholders, which contain no whitespace.
- * Upon a Query field, a placeholder is "{$args.<path>}".
- * A path names a field argument, then optionally nested Input Object fields.
- * Upon an entity, a placeholder is "{$key.<path>}".
- * A path names a key field, then optionally fields of a nested key Object; it never includes a list.
- * Every resolvable @key of the type in this subgraph selects each path,
- * so every representation the router sends to this subgraph contains it.
  *
  * @generated from message wg.cosmo.node.v1.CacheTagConfiguration
  */
@@ -579,6 +572,10 @@ export type CacheTagConfiguration = Message<"wg.cosmo.node.v1.CacheTagConfigurat
   fieldName: string;
 
   /**
+   * The format is literal text with placeholders, which contain no whitespace.
+   * Upon a Query field, a placeholder is "{$args.<path>}".
+   * Upon an entity, a placeholder is "{$key.<path>}".
+   *
    * @generated from field: string format = 3;
    */
   format: string;

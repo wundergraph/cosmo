@@ -1569,18 +1569,14 @@ func (x *CachePopulateConfiguration) GetEntityTypeName() string {
 }
 
 // Per-Query-field or per-entity declaration for @cacheTag, one per distinct format.
-// The format is literal text with placeholders, which contain no whitespace.
-// Upon a Query field, a placeholder is "{$args.<path>}".
-// A path names a field argument, then optionally nested Input Object fields.
-// Upon an entity, a placeholder is "{$key.<path>}".
-// A path names a key field, then optionally fields of a nested key Object; it never includes a list.
-// Every resolvable @key of the type in this subgraph selects each path,
-// so every representation the router sends to this subgraph contains it.
 type CacheTagConfiguration struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	TypeName string                 `protobuf:"bytes,1,opt,name=type_name,json=typeName,proto3" json:"type_name,omitempty"`
 	// Empty for an entity.
-	FieldName     string `protobuf:"bytes,2,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
+	FieldName string `protobuf:"bytes,2,opt,name=field_name,json=fieldName,proto3" json:"field_name,omitempty"`
+	// The format is literal text with placeholders, which contain no whitespace.
+	// Upon a Query field, a placeholder is "{$args.<path>}".
+	// Upon an entity, a placeholder is "{$key.<path>}".
 	Format        string `protobuf:"bytes,3,opt,name=format,proto3" json:"format,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
