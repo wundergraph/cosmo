@@ -133,6 +133,14 @@ Safelisting and `log_unknown` use the query's SHA256 hash to find published oper
 
 Both `persisted_operation_sha256` and `operation_sha256` record the ID from the request. If you send `get_employees_v1`, both fields contain `get_employees_v1`.
 
+### ID conflicts
+
+Within a graph, an ID identifies the same operation body for all clients. Publishing an ID with the same body for another client is allowed. Publishing an ID that any client of the graph already registers with a different body returns `CONFLICT` for that operation and leaves the existing registration unchanged. Other operations in the request are still published. The same applies when a single request, or several concurrent requests, contain the same ID with different bodies: one body is registered and the others return `CONFLICT`.
+
+Different graphs can use the same ID for different bodies.
+
+An ID stays reserved while any client registers it. Deleting an operation removes one client's registration, and deleting a client removes all of its registrations. After the last registration of an ID is deleted, the ID can be published with a different body. Routers may still have the previous body cached, so prefer a new ID when you change an operation.
+
 ## Deleting persisted operations in Studio
 
 You can delete persisted operations directly in Cosmo Studio after they have been uploaded via `wgc operations push`.

@@ -18,7 +18,11 @@ import { GraphQLDeferDirective } from '@graphql-tools/utils';
 import { PlainMessage, PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
-import { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import {
+  findConflictingOperation,
+  OperationsRepository,
+  type PersistedOperationRegistration,
+} from '../../repositories/OperationsRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
@@ -49,6 +53,15 @@ function withDirectives(schema: GraphQLSchema, directives: ReadonlyArray<GraphQL
   }
 
   return new GraphQLSchema({ ...config, directives: newDirectives });
+}
+
+function conflictingOperation(conflict: PersistedOperationRegistration): PublishedOperation {
+  return create(PublishedOperationSchema, {
+    id: conflict.operationId,
+    hash: conflict.hash,
+    status: PublishedOperationStatus.CONFLICT,
+    operationNames: conflict.operationNames ?? [],
+  });
 }
 
 export function publishPersistedOperations(
@@ -194,13 +207,13 @@ export function publishPersistedOperations(
     const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
     const clientId = await operationsRepo.registerClient(req.clientName, userId);
 
-    const operations: PublishedOperation[] = [];
-    const updatedOperations: UpdatedPersistedOperation[] = [];
     // Retrieve the operations that have already been published
     const operationsResult = await operationsRepo.getPersistedOperations(clientId);
     const operationsByOperationId = new Map(
       operationsResult.map((op) => [op.operationId, { hash: op.hash, operationNames: op.operationNames }]),
     );
+    // An operation ID identifies one body across all clients of the graph
+    const registrations = await operationsRepo.getPersistedOperationRegistrations(req.operations.map((op) => op.id));
 
     // Check if adding new operations would exceed the manifest limit
     const allExistingOperations = await operationsRepo.getAllPersistedOperationsForGraph();
@@ -237,20 +250,19 @@ export function publishPersistedOperations(
       const operationId = operation.id;
       const operationHash = crypto.createHash('sha256').update(operation.contents).digest('hex');
       const prev = operationsByOperationId.get(operationId);
-      if (prev !== undefined && prev.hash !== operationHash) {
-        // We're trying to update an operation with the same ID but different hash
+      const conflict = findConflictingOperation(registrations, operationId, operationHash);
+      if (conflict) {
+        // We're trying to register an ID which already identifies a different body
         return {
-          publishedOperation: create(PublishedOperationSchema, {
-            id: operationId,
-            hash: prev.hash,
-            status: PublishedOperationStatus.CONFLICT,
-            operationNames: prev.operationNames,
-          }),
+          publishedOperation: conflictingOperation(conflict),
           updatedOp: null,
           error: null,
         };
       }
       const operationNames = extractOperationNames(operation.contents);
+      // Record the ID before the first await, so that a later entry of this request
+      // with the same ID and a different body is reported as a conflict
+      registrations.push({ operationId, hash: operationHash, operationNames });
       const clientName = encodeURIComponent(req.clientName);
       const path = createBlobStoragePath({
         organizationId,
@@ -326,14 +338,22 @@ export function publishPersistedOperations(
       };
     }
 
+    // Identical entries of the request share one registration
+    const updatedOperations = new Map<string, UpdatedPersistedOperation>();
     for (const r of results) {
-      operations.push(r.publishedOperation!);
       if (r.updatedOp !== null) {
-        updatedOperations.push(r.updatedOp);
+        updatedOperations.set(r.updatedOp.operationId, r.updatedOp);
       }
     }
 
-    await operationsRepo.updatePersistedOperations(clientId, userId, updatedOperations);
+    // Another request may have registered one of the IDs with a different body in the meantime
+    const conflicts = await operationsRepo.registerPersistedOperations(clientId, userId, [
+      ...updatedOperations.values(),
+    ]);
+    const operations = results.map((r) => {
+      const conflict = conflicts.get(r.publishedOperation!.id);
+      return conflict ? conflictingOperation(conflict) : r.publishedOperation!;
+    });
 
     try {
       await operationsRepo.generateAndUploadManifest({

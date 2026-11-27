@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { OverrideChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { SQL, aliasedTable, and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
+import { SQL, aliasedTable, and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { DBSchemaChangeType } from '../../db/models.js';
@@ -41,12 +41,92 @@ type IgnoreAllOverride = {
   hash: string;
 };
 
+export interface PersistedOperationRegistration {
+  operationId: string;
+  hash: string;
+  operationNames: string[] | null;
+}
+
+/**
+ * Within a graph, an operation ID identifies one body across all clients.
+ * Returns a registration of the ID with a different body, if there is one.
+ */
+export function findConflictingOperation(
+  registrations: PersistedOperationRegistration[],
+  operationId: string,
+  hash: string,
+): PersistedOperationRegistration | undefined {
+  return registrations.find((registration) => registration.operationId === operationId && registration.hash !== hash);
+}
+
 @traced
 export class OperationsRepository {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
     private federatedGraphId: string,
   ) {}
+
+  /**
+   * Returns every registration of the given operation IDs in the graph, across all clients.
+   * Registrations without stored contents are included.
+   */
+  public getPersistedOperationRegistrations(operationIds: string[]): Promise<PersistedOperationRegistration[]> {
+    if (operationIds.length === 0) {
+      return Promise.resolve([]);
+    }
+
+    return this.db
+      .select({
+        operationId: federatedGraphPersistedOperations.operationId,
+        hash: federatedGraphPersistedOperations.hash,
+        operationNames: federatedGraphPersistedOperations.operationNames,
+      })
+      .from(federatedGraphPersistedOperations)
+      .where(
+        and(
+          eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
+          inArray(federatedGraphPersistedOperations.operationId, operationIds),
+        ),
+      );
+  }
+
+  /**
+   * Registers the operations for the client, except those whose ID is already registered
+   * with a different body by any client of the graph. Returns the existing registration
+   * for each skipped operation, keyed by operation ID.
+   *
+   * Registrations are serialized per graph, so that concurrent requests cannot register
+   * the same ID with different bodies.
+   */
+  public registerPersistedOperations(
+    clientId: string,
+    userId: string,
+    operations: UpdatedPersistedOperation[],
+  ): Promise<Map<string, PersistedOperationRegistration>> {
+    return this.db.transaction(async (tx) => {
+      const lockKey = `persisted-operations:${this.federatedGraphId}`;
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${lockKey}))`);
+
+      const repo = new OperationsRepository(tx, this.federatedGraphId);
+      const existing = await repo.getPersistedOperationRegistrations(operations.map((op) => op.operationId));
+
+      const conflicts = new Map<string, PersistedOperationRegistration>();
+      for (const operation of operations) {
+        const conflict = findConflictingOperation(existing, operation.operationId, operation.hash);
+        if (conflict) {
+          conflicts.set(operation.operationId, conflict);
+        }
+      }
+
+      await repo.updatePersistedOperations(
+        clientId,
+        userId,
+        operations.filter((op) => !conflicts.has(op.operationId)),
+      );
+
+      return conflicts;
+    });
+  }
 
   public async updatePersistedOperations(clientId: string, userId: string, operations: UpdatedPersistedOperation[]) {
     const now = new Date();
