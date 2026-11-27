@@ -204,15 +204,24 @@ func TestResponseCacheZeroFallbackTTL(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
+		name         string
 		cacheControl string
 		wantRequests int
 	}{
-		{"public", 2},
-		{"max-age=60", 1},
+		{
+			name:         "public alone fetches from the subgraph twice",
+			cacheControl: "public",
+			wantRequests: 2,
+		},
+		{
+			name:         "max-age=60 serves the second request from cache",
+			cacheControl: "max-age=60",
+			wantRequests: 1,
+		},
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.cacheControl, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			cfg := &config.ResponseCacheConfiguration{
 				Enabled: true,
