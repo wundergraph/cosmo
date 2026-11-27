@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"slices"
 
+	streamsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/streams/v1"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
@@ -142,6 +143,11 @@ func (e *MutableEngineEvent) Clone() datasource.MutableStreamEvent {
 	return &MutableEngineEvent{data: slices.Clone(e.data)}
 }
 
+func (e *MutableEngineEvent) Cursor() *streamsv1.Cursor {
+	// engine events carry no broker position.
+	return nil
+}
+
 // EngineEvent is the event used to write to the engine subscription
 type EngineEvent struct {
 	evt *MutableEngineEvent
@@ -159,6 +165,11 @@ func (e *EngineEvent) Clone() datasource.MutableStreamEvent {
 		return &MutableEngineEvent{}
 	}
 	return e.evt.Clone()
+}
+
+func (e *EngineEvent) Cursor() *streamsv1.Cursor {
+	// engine events carry no broker position.
+	return nil
 }
 
 type engineSubscriptionOnStartHookContext struct {
