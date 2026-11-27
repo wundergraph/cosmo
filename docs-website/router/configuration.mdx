@@ -3061,6 +3061,7 @@ Accept: application/graphql-response+json, application/json;q=0.9
 ```
 
 `text/event-stream` and `multipart/mixed` still take precedence for subscriptions and `@defer` when the client asks for them.
+Each part of a `multipart/mixed` response always uses `Content-Type: application/json`.
 
 <Warning>
   When the router selects `application/graphql-response+json`, the request errors in the [table above](#graphql-over-http) get their 4xx status codes, even with `status_codes: legacy`. An unknown persisted operation still returns 200 with `PersistedQueryNotFound`. A client that sends it in its `Accept` header but prefers `application/json` keeps the configured status codes.

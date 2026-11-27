@@ -295,7 +295,7 @@ func TestGraphQLResponseMediaType(t *testing.T) {
 			expectedContentType string
 		}{
 			{
-				name:                "graphql-response+json for a successful operation",
+				name:                "returns graphql-response+json with status 200 for a successful query when Accept is graphql-response+json",
 				accept:              "application/graphql-response+json",
 				query:               `{ employee(id: 1) { id } }`,
 				expectedBody:        `{"data":{"employee":{"id":1}}}`,
@@ -303,7 +303,7 @@ func TestGraphQLResponseMediaType(t *testing.T) {
 				expectedContentType: graphqlResponseContentType,
 			},
 			{
-				name:                "graphql-response+json with the spec status code for a request error",
+				name:                "returns graphql-response+json with status 403 for a disabled introspection query when Accept prefers graphql-response+json",
 				accept:              "application/graphql-response+json, application/json;q=0.9",
 				query:               `{ __schema { __typename } }`,
 				expectedBody:        introspectionDisabledBody,
@@ -311,7 +311,7 @@ func TestGraphQLResponseMediaType(t *testing.T) {
 				expectedContentType: graphqlResponseContentType,
 			},
 			{
-				name:                "application/json with the legacy status code for a request error",
+				name:                "returns application/json with status 200 for a disabled introspection query when Accept is application/json",
 				accept:              "application/json",
 				query:               `{ __schema { __typename } }`,
 				expectedBody:        introspectionDisabledBody,
@@ -319,14 +319,14 @@ func TestGraphQLResponseMediaType(t *testing.T) {
 				expectedContentType: jsonContentType,
 			},
 			{
-				name:                "application/json without an Accept header",
+				name:                "returns application/json with status 200 for a disabled introspection query when there is no Accept header",
 				query:               `{ __schema { __typename } }`,
 				expectedBody:        introspectionDisabledBody,
 				expectedStatus:      http.StatusOK,
 				expectedContentType: jsonContentType,
 			},
 			{
-				name:                "application/json when preferred by q-value",
+				name:                "returns application/json for a successful query when Accept gives application/json a higher q-value",
 				accept:              "application/graphql-response+json;q=0.5, application/json",
 				query:               `{ employee(id: 1) { id } }`,
 				expectedBody:        `{"data":{"employee":{"id":1}}}`,
@@ -351,7 +351,7 @@ func TestGraphQLResponseMediaType(t *testing.T) {
 			})
 		}
 
-		t.Run("text/event-stream wins for a subscription", func(t *testing.T) {
+		t.Run("streams a subscription as text/event-stream when Accept lists text/event-stream before graphql-response+json", func(t *testing.T) {
 			t.Parallel()
 
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -363,7 +363,7 @@ func TestGraphQLResponseMediaType(t *testing.T) {
 			require.Equal(t, "text/event-stream", res.Response.Header.Get("Content-Type"))
 		})
 
-		t.Run("legacy status code for a subscription error over text/event-stream", func(t *testing.T) {
+		t.Run("returns status 200 for a blocked subscription when the error is streamed as text/event-stream", func(t *testing.T) {
 			t.Parallel()
 
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{

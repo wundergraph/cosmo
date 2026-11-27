@@ -286,7 +286,7 @@ func NegotiateSubscriptionParams(r *http.Request, preferJson bool) SubscriptionP
 		useMultipart bool
 		useSse       = q.Has(WgSseParam)
 		bestType     = ""
-		bestQ        = -1.0 // Default to lowest possible q-value
+		bestQ        = 0.0 // A q-value of 0 rejects a media type, so only a higher q-value can select one
 		acceptsJSON  bool
 
 		// jsonResponseType is the JSON media type the client prefers for a non-streamed response:
@@ -302,23 +302,31 @@ func NegotiateSubscriptionParams(r *http.Request, preferJson bool) SubscriptionP
 		qValue := 1.0                            // Default quality factor
 		if qStr, exists := params["q"]; exists { // If a quality factor exists, parse it and prefer it
 			if parsedQ, err := strconv.ParseFloat(qStr, 64); err == nil {
-				qValue = parsedQ
+				// RFC 9110 limits q to between 0 and 1. A negative value rejects the media type
+				qValue = min(max(parsedQ, 0), 1)
 			}
 		}
 
-		// The preferred JSON media type. Wildcards accept application/json, the default
-		jsonType := mediaType
-		if mediaType == "*/*" || mediaType == "application/*" {
+		// jsonType is the JSON media type this entry accepts. Empty when it accepts none
+		jsonType := ""
+		switch mediaType {
+		case jsonContent, graphqlResponseMime:
+			jsonType = mediaType
+
+			// We also have an exception where we prioritize json over higher priority media types
+			if preferJson && qValue > 0 {
+				acceptsJSON = true
+			}
+		case "*/*", "application/*":
+			// A wildcard also matches application/json, so treat it as application/json at its
+			// q-value. Then application/graphql-response+json is only chosen when the client
+			// prefers it over the wildcard.
 			jsonType = jsonContent
 		}
-		if (jsonType == jsonContent || jsonType == graphqlResponseMime) && qValue > jsonResponseQ {
+
+		if jsonType != "" && qValue > jsonResponseQ {
 			jsonResponseQ = qValue
 			jsonResponseType = jsonType
-		}
-
-		// We also have an exception where we prioritize json over higher priority media types
-		if preferJson && qValue > 0 && (mediaType == jsonContent || mediaType == graphqlResponseMime) {
-			acceptsJSON = true
 		}
 
 		// Find the media type with the highest q-value. If none is provided, it will default to the first option
