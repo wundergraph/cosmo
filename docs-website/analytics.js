@@ -2,6 +2,7 @@
     const AC_ACCOUNT = '1001761818';
     const AC_SRC = 'https://diffuser-cdn.app-us1.com/diffuser/diffuser.js';
     let loaded = false;
+    let hsLoaded = false;
 
     function loadActiveCampaign() {
         if (loaded) {
@@ -24,6 +25,21 @@
         vgo('process', 'allowTracking');
     }
 
+    function loadHubSpotScript() {
+        if (hsLoaded) {
+            return;
+        }
+
+        hsLoaded = true;
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://js-eu1.hs-scripts.com/148804613.js';
+
+        const sibling = document.getElementsByTagName('script')[0];
+        sibling.parentNode.insertBefore(script, sibling);
+
+    }
+
     function updateConsentFromOsano() {
         const consent = window.Osano && Osano.cm && Osano.cm.getConsent ? Osano.cm.getConsent() : null;
         const marketing = (consent && consent.MARKETING === 'ACCEPT' || !!(window.Osano && Osano.cm && Osano.cm.marketing));
@@ -31,6 +47,7 @@
 
         if (marketing || analytics) {
             loadActiveCampaign();
+            loadHubSpotScript();
         }
 
         if (typeof gtag === 'function') {
