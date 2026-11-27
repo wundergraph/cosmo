@@ -1499,6 +1499,7 @@ export const organizationRoleEnum = pgEnum('organization_role', [
   'subgraph-publisher',
   'subgraph-checker',
   'subgraph-viewer',
+  'subgraph-check-approver',
 ] as const);
 
 export const organizationGroups = pgTable('organization_groups', {
@@ -2683,6 +2684,11 @@ export const graphCollections = pgTable(
         t.federatedGraphId,
         t.privateToUserId,
       ),
+      // Team-scoped names are unique per graph, ignoring case. Private
+      // collections are excluded, so users can name their own freely.
+      uniqueTeamName: uniqueIndex('gc_unique_team_name')
+        .on(t.federatedGraphId, sql`lower(${t.name})`)
+        .where(sql`${t.privateToUserId} IS NULL`),
     };
   },
 );

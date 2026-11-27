@@ -33,11 +33,11 @@ runs:
         username: ${{ inputs.registry-username }}
         password: ${{ inputs.registry-password }}
 
-    - name: install-helm
-      uses: azure/setup-helm@v4.2.0
-
-    - name: install-yq
-      uses: mikefarah/yq@v4.42.1
+    - name: install-helm-and-yq
+      uses: ./.github/actions/mise
+      with:
+        working-directory: helm
+        tools: helm yq
 
     - name: smoke-tests
       shell: bash

@@ -864,6 +864,11 @@ func (rw *websocketResponseWriter) Error(data []byte) {
 	}
 }
 
+// Reset clears the pending frame without sending a message.
+func (rw *websocketResponseWriter) Reset() {
+	rw.buf.Reset()
+}
+
 func (rw *websocketResponseWriter) Write(data []byte) (int, error) {
 	rw.writtenBytes += len(data)
 	return rw.buf.Write(data)
@@ -895,7 +900,7 @@ func (rw *websocketResponseWriter) Flush() error {
 		}
 
 		err = rw.protocol.WriteGraphQLData(rw.id, payload, extensions)
-		rw.buf.Reset()
+		rw.Reset()
 		if err != nil {
 			return err
 		}
@@ -1267,6 +1272,8 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		}
 	}
 	reqContext := buildRequestContext(requestContextOptions{
+		executionConfig:     ExecutionConfigFromContext(registration.clientRequest.Context()),
+		subgraphResolver:    subgraphResolverFromContext(registration.clientRequest.Context()),
 		operationContext:    operationCtx,
 		requestLogger:       h.logger,
 		metricSetAttributes: nil,
@@ -1298,6 +1305,9 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	}
 
 	if origCtx := getRequestContext(h.request.Context()); origCtx != nil {
+		if renderer := origCtx.customFieldValueRenderer; renderer != nil {
+			resolveCtx.SetFieldValueRenderer(renderer)
+		}
 		reqContext.expressionContext = *origCtx.expressionContext.Clone()
 		if h.graphqlHandler.headerPropagation != nil {
 			resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(

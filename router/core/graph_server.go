@@ -32,6 +32,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -1064,18 +1065,25 @@ func (s *graphServer) buildGraphMux(
 	// Currently, we only support custom attributes from the context for OTLP metrics
 	b := buildAttributesMap(s.metricConfig.Attributes)
 
+	resolved := make([]routerconfig.Subgraph, len(subgraphs))
+	for i, sg := range subgraphs {
+		resolved[i] = routerconfig.Subgraph{ID: sg.Id, Name: sg.Name, RoutingURL: sg.UrlString}
+	}
+	executionConfig := routerconfig.NewExecutionConfig(
+		opts.EngineConfig.GetGraphqlSchema(), opts.EngineConfig.GetGraphqlClientSchema(), resolved)
+
 	// Enrich the request context with the subgraph information which is required for custom modules and tracing
 	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
-
 			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			// If this is a batched request attach id to the logger
 			if batchedOperationId, ok := r.Context().Value(BatchedOperationId{}).(string); ok {
 				requestLogger = requestLogger.With(logging.WithBatchedRequestOperationID(batchedOperationId))
 			}
 			reqContext := buildRequestContext(requestContextOptions{
+				executionConfig:               executionConfig,
+				subgraphResolver:              subgraphResolver,
 				operationContext:              nil,
 				requestLogger:                 requestLogger,
 				metricSetAttributes:           b,
@@ -1089,7 +1097,9 @@ func (s *graphServer) buildGraphMux(
 				r:                             r,
 			})
 
-			r = r.WithContext(withRequestContext(r.Context(), reqContext))
+			ctx := withRequestContext(withSubgraphResolver(r.Context(), subgraphResolver), reqContext)
+			r = r.WithContext(ctx)
+			reqContext.request = r
 
 			// For debugging purposes, we can validate from what version of the config the request is coming from
 			if s.setConfigVersionHeader {
@@ -1856,11 +1866,18 @@ func (s *graphServer) setupConnector(ctx context.Context, opts setupConnectorOpt
 				grpcTLS = opts.defaultClientTLS
 			}
 
+			// The circuits are shared with the HTTP subgraphs and are looked up by subgraph name on every call
+			var unaryInterceptors []grpc.UnaryClientInterceptor
+			if s.circuitBreakerManager != nil {
+				unaryInterceptors = append(unaryInterceptors, circuit.NewUnaryClientInterceptor(sg.Name, s.circuitBreakerManager, s.logger))
+			}
+
 			remoteProvider, err := grpcremote.NewRemoteGRPCProvider(grpcremote.RemoteGRPCProviderConfig{
-				Logger:     s.logger,
-				Endpoint:   sg.RoutingUrl,
-				TLSConfig:  grpcTLS,
-				Propagator: s.compositePropagator,
+				Logger:            s.logger,
+				Endpoint:          sg.RoutingUrl,
+				TLSConfig:         grpcTLS,
+				Propagator:        s.compositePropagator,
+				UnaryInterceptors: unaryInterceptors,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create standalone plugin for subgraph %s: %w", dsConfig.Id, err)

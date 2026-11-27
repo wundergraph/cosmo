@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -52,6 +53,8 @@ func (m MyCustomWebsocketModule) OnOriginResponse(resp *http.Response, ctx core.
 func (m MyCustomWebsocketModule) OnOriginRequest(req *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
 
 	require.NotNil(m.t, req)
+	// Only the myff schema defines productCount. Read from the outgoing operation.
+	assert.Contains(m.t, core.ExecutionConfigFromContext(req.Context()).Schema(), "productCount: Int!")
 	require.Equal(m.t, req.Header.Get("Connection"), "Upgrade")
 	require.Equal(m.t, req.Header.Get("Upgrade"), "websocket")
 	require.Equal(m.t, req.Header.Get("Sec-WebSocket-Version"), "13")
@@ -95,6 +98,7 @@ func TestWebsocketCustomModule(t *testing.T) {
 			}
 
 			conn := xEnv.InitGraphQLWebSocketConnection(http.Header{
+				"X-Feature-Flag":         {"myff"},
 				"sessionToken":           []string{"123"},
 				"GraphQL-Client-Name":    []string{"my-client"},
 				"GraphQL-Client-Version": []string{"1.0.0"},

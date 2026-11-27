@@ -37,10 +37,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
-        with:
-          cache: true
-          install: false
+      - uses: ./.github/actions/node
 
       - name: Install
         run: pnpm install --frozen-lockfile --ignore-scripts --filter='wundergraph-cosmo'

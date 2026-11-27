@@ -28,6 +28,7 @@ export function getOperationOverrides(
 
     if (!graph) {
       return {
+        canManageOverrides: false,
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: 'Requested graph does not exist',
@@ -54,6 +55,7 @@ export function getOperationOverrides(
     });
 
     return {
+      canManageOverrides: authContext.rbac.hasFederatedGraphWriteAccess(graph),
       response: {
         code: EnumStatusCode.OK,
       },

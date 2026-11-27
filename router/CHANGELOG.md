@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.378.1](https://github.com/wundergraph/cosmo/compare/router@0.378.0...router@0.378.1) (2026-11-25)
+
+### Bug Fixes
+
+* **router:** apply custom field renderers to WebSocket operations ([#3568](https://github.com/wundergraph/cosmo/issues/3568)) ([4ed3e63](https://github.com/wundergraph/cosmo/commit/4ed3e638f575d39f0212cdf4bf8470646f9de9a4)) (@fiam)
+
+## [0.378.0](https://github.com/wundergraph/cosmo/compare/router@0.377.0...router@0.378.0) (2026-11-24)
+
+### Features
+
+* add circuit breakers to gRPC remote subgraphs ([#3579](https://github.com/wundergraph/cosmo/issues/3579)) ([716458b](https://github.com/wundergraph/cosmo/commit/716458bae50c5d02d80e240028b3cfbc3355c533)) (@alepane21)
+
+## [0.377.0](https://github.com/wundergraph/cosmo/compare/router@0.376.0...router@0.377.0) (2026-11-24)
+
+### Features
+
+* **router:** negotiate delivery guarantees for EDFS subscriptions ([#3456](https://github.com/wundergraph/cosmo/issues/3456)) ([d17fb5e](https://github.com/wundergraph/cosmo/commit/d17fb5e19387d68ba1a7e0eb7c209465275a0c7b)) (@dkorittki)
+
+## [0.376.0](https://github.com/wundergraph/cosmo/compare/router@0.375.0...router@0.376.0) (2026-11-23)
+
+### Features
+
+* **router:** expose the execution config for the current request ([#3554](https://github.com/wundergraph/cosmo/issues/3554)) ([ed994e5](https://github.com/wundergraph/cosmo/commit/ed994e527be9d227dfb14413258c13f481da22e1)) (@fiam)
+
+### Performance Improvements
+
+* **router:** bump graphql-go-tools to v2.32.2 ([#3576](https://github.com/wundergraph/cosmo/issues/3576)) ([860ad1f](https://github.com/wundergraph/cosmo/commit/860ad1fa0e3a4fcc9ac2be34abee3d1a3e3ccf55)) (@ysmolski)
+
 ## [0.375.0](https://github.com/wundergraph/cosmo/compare/router@0.374.0...router@0.375.0) (2026-11-19)
 
 ### Features

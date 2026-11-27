@@ -24,8 +24,10 @@ export const NameDialog = ({
   initialName = '',
   submitLabel,
   isPending,
+  error,
   onClose,
   onSubmit,
+  onNameChange,
 }: {
   title: string;
   description?: string;
@@ -33,8 +35,11 @@ export const NameDialog = ({
   initialName?: string;
   submitLabel: string;
   isPending?: boolean;
+  /** Shown under the field, and blocks submitting, until the name changes. */
+  error?: string;
   onClose: () => void;
   onSubmit: (name: string) => void;
+  onNameChange?: (name: string) => void;
 }) => {
   const [name, setName] = useState(initialName);
 
@@ -43,7 +48,7 @@ export const NameDialog = ({
   const submit = (event: FormEvent) => {
     event.preventDefault();
 
-    if (!trimmed || isPending) {
+    if (!trimmed || isPending || error) {
       return;
     }
 
@@ -66,18 +71,29 @@ export const NameDialog = ({
             <Input
               id="graph-collection-name"
               autoFocus
+              disabled={isPending}
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                setName(event.target.value);
+                onNameChange?.(event.target.value);
+              }}
               maxLength={MAX_COLLECTION_NAME_LENGTH}
               placeholder="Cart operations"
+              aria-invalid={!!error}
+              aria-describedby={error ? 'graph-collection-name-error' : undefined}
             />
+            {error && (
+              <p id="graph-collection-name-error" className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
           </div>
 
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!trimmed} isLoading={isPending}>
+            <Button type="submit" disabled={!trimmed || !!error} isLoading={isPending}>
               {submitLabel}
             </Button>
           </DialogFooter>
