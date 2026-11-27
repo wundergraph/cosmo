@@ -291,6 +291,9 @@ type requestContext struct {
 	forceSha256Compute bool
 	// responseCache counts what the response cache did for the fetches of the request
 	responseCache responseCacheStats
+	// writeSubscriptionError sends an error frame to the client for this websocket subscription.
+	// It is nil for other requests.
+	writeSubscriptionError func(err error)
 }
 
 // responseCacheStats is written by concurrent fetches.

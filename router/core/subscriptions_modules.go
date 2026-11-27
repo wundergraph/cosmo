@@ -438,6 +438,11 @@ func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHandlerContext, 
 			context:                        updaterCtx,
 		}
 		newEvts, err := fn(hookCtx, datasource.NewStreamEvents(evts))
+		// The error closes the subscription. Tell the client why, as SubscriptionOnStart errors do,
+		// instead of leaving it waiting on a subscription that no longer exists.
+		if err != nil && requestContext.writeSubscriptionError != nil {
+			requestContext.writeSubscriptionError(err)
+		}
 		return newEvts.Unsafe(), err
 	}
 }
