@@ -3030,7 +3030,9 @@ With `status_codes: September2026`, the router returns these status codes for re
 
 Other request errors keep their status code.
 The response body is the same in both modes.
-Error responses keep the `Content-Type: application/json` header.
+
+`status_codes` only applies to responses with `Content-Type: application/json`.
+Responses with `application/graphql-response+json` always use the status codes of the spec. See [Response media type](#response-media-type).
 
 A request with only the hash of an unknown persisted operation returns 200 with `PersistedQueryNotFound` in both modes.
 Clients using automatic persisted queries rely on this response to send the full query.
@@ -3044,6 +3046,26 @@ Clients using automatic persisted queries rely on this response to send the full
 <Info>
   Mutations sent over `GET` return 405 with the `Allow: POST` header in both modes.
 </Info>
+
+### Response media type
+
+The router picks the media type of a response from the `Accept` header of the request:
+
+- `application/graphql-response+json` when the client prefers it over `application/json`. The response uses `Content-Type: application/graphql-response+json; charset=utf-8` and the status codes of the spec, whatever `status_codes` is set to.
+- `application/json` in every other case, including requests without an `Accept` header or with `*/*`.
+
+The spec recommends that clients send this header:
+
+```
+Accept: application/graphql-response+json, application/json;q=0.9
+```
+
+`text/event-stream` and `multipart/mixed` still take precedence for subscriptions and `@defer` when the client asks for them.
+Each part of a `multipart/mixed` response always uses `Content-Type: application/json`.
+
+<Warning>
+  When the router selects `application/graphql-response+json`, the request errors in the [table above](#graphql-over-http) get their 4xx status codes, even with `status_codes: legacy`. An unknown persisted operation still returns 200 with `PersistedQueryNotFound`. A client that sends it in its `Accept` header but prefers `application/json` keeps the configured status codes.
+</Warning>
 
 ### Example YAML Configuration
 

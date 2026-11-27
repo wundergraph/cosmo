@@ -243,6 +243,18 @@ type writeRequestErrorsParams struct {
 	headerPropagation *HeaderPropagation
 }
 
+// isSubscriptionRequest reports whether the request carries a subscription operation.
+// requestContext can be nil, e.g. when called from module WriteResponseError or the batch handler.
+func isSubscriptionRequest(requestContext *requestContext) bool {
+	return requestContext != nil && requestContext.operation != nil && requestContext.operation.opType == "subscription"
+}
+
+// negotiateErrorResponse returns how request errors are written for r. Subscriptions can be
+// streamed as SSE or multipart. Other operations prefer a JSON media type over streaming.
+func negotiateErrorResponse(r *http.Request, isSubscription bool) SubscriptionParams {
+	return NegotiateSubscriptionParams(r, !isSubscription)
+}
+
 // writeRequestErrors writes the given request errors to the http.ResponseWriter.
 // It accepts a graphqlerrors.RequestErrors object and writes it to the response based on the GraphQL spec.
 func writeRequestErrors(params writeRequestErrorsParams) {
@@ -255,7 +267,7 @@ func writeRequestErrors(params writeRequestErrorsParams) {
 	// According to the tests requestContext can be nil (when called from module WriteResponseError)
 	// As such we have coded this condition defensively to be safe
 	requestContext := getRequestContext(params.request.Context())
-	isSubscription := requestContext != nil && requestContext.operation != nil && requestContext.operation.opType == "subscription"
+	isSubscription := isSubscriptionRequest(requestContext)
 
 	// We only want to apply header propagation for non-subscription operations
 	// In certain cases the requestContext can be nil, e.g.:- when called from the batch handler
@@ -266,7 +278,7 @@ func writeRequestErrors(params writeRequestErrorsParams) {
 		}
 	}
 
-	wgRequestParams := NegotiateSubscriptionParams(params.request, !isSubscription)
+	wgRequestParams := negotiateErrorResponse(params.request, isSubscription)
 
 	// Is subscription
 	if wgRequestParams.UseSse || wgRequestParams.UseMultipart {
@@ -299,7 +311,7 @@ func writeRequestErrors(params writeRequestErrorsParams) {
 		}
 	} else {
 		// Regular request
-		params.writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+		params.writer.Header().Set("Content-Type", jsonResponseContentType(wgRequestParams.UseGraphQLResponseJSON))
 		if params.statusCode != 0 {
 			params.writer.WriteHeader(params.statusCode)
 		}
@@ -384,9 +396,15 @@ func requestErrorsFromHttpError(httpErr HttpError) graphqlerrors.RequestErrors {
 
 // writeOperationError writes the given error to the http.ResponseWriter but evaluates the error type first.
 // It also logs additional information about the error. The status code of classified errors depends on
-// the configured status codes, see graphql_over_http.status_codes.
+// the configured status codes, see graphql_over_http.status_codes. Clients that accept
+// application/graphql-response+json always get the status codes of the spec.
 func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error, propagation *HeaderPropagation, statusCodes config.GraphQLOverHTTPStatusCodes) {
 	requestLogger.Debug("operation error", zap.Error(err))
+
+	// Use the media type writeRequestErrors picks, so streamed errors keep the configured status codes
+	if negotiateErrorResponse(r, isSubscriptionRequest(getRequestContext(r.Context()))).UseGraphQLResponseJSON {
+		statusCodes = config.GraphQLOverHTTPStatusCodesSeptember2026
+	}
 
 	var reportErr ReportError
 	var httpErr HttpError

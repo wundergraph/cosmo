@@ -141,6 +141,21 @@ func TestNegotiateSubscriptionParams(t *testing.T) {
 				UseMultipart:  false,
 			},
 		},
+		{
+			name: "rejects a negative q-value instead of selecting text/event-stream",
+			args: args{r: &http.Request{URL: &url.URL{}, Header: http.Header{"Accept": []string{"text/event-stream;q=-0.5"}}}},
+			want: SubscriptionParams{},
+		},
+		{
+			name: "rejects text/event-stream when its q-value is 0",
+			args: args{r: &http.Request{URL: &url.URL{}, Header: http.Header{"Accept": []string{"text/event-stream;q=0"}}}},
+			want: SubscriptionParams{},
+		},
+		{
+			name: "treats a q-value above 1 as 1 so the first media type still wins",
+			args: args{r: &http.Request{URL: &url.URL{}, Header: http.Header{"Accept": []string{"application/json, text/event-stream;q=5"}}}},
+			want: SubscriptionParams{},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -164,6 +179,28 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 
 		assert.Equal(t, sseMimeType, recorder.Header().Get("Content-Type"))
 		assert.True(t, recorder.Flushed, "expected the SSE response head to be flushed before any message is written")
+	})
+
+	t.Run("sets the Content-Type to graphql-response+json for a non-streamed subscription when Accept is graphql-response+json", func(t *testing.T) {
+		for _, tc := range []struct {
+			query       string
+			accept      string
+			contentType string
+		}{
+			{query: WgSubscribeOnceParam, accept: graphqlResponseMime, contentType: "application/graphql-response+json; charset=utf-8"},
+			{query: WgSubscribeOnceParam, accept: jsonContent, contentType: ""},
+			{accept: graphqlResponseMime, contentType: "application/graphql-response+json; charset=utf-8"},
+			{accept: jsonContent, contentType: ""},
+		} {
+			recorder := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/graphql?"+tc.query, nil)
+			req.Header.Set("Accept", tc.accept)
+
+			_, _, err := GetSubscriptionResponseWriter(resolve.NewContext(t.Context()), req, recorder, false, 0)
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.contentType, recorder.Header().Get("Content-Type"), "query %q, accept %q", tc.query, tc.accept)
+		}
 	})
 
 	t.Run("sets and clears a deadline for every SSE write and flush", func(t *testing.T) {
@@ -240,4 +277,37 @@ func TestGetSubscriptionResponseWriter(t *testing.T) {
 		assert.Nil(t, writer)
 		assert.ErrorIs(t, resolveCtx.Context().Err(), context.Canceled)
 	})
+}
+
+func TestAcceptsGraphQLResponseJSON(t *testing.T) {
+	tests := []struct {
+		name   string
+		accept string
+		want   bool
+	}{
+		{name: "returns false when there is no Accept header", accept: "", want: false},
+		{name: "returns false when Accept is */*", accept: "*/*", want: false},
+		{name: "returns false when Accept is application/json", accept: "application/json", want: false},
+		{name: "returns true when Accept is application/graphql-response+json", accept: "application/graphql-response+json", want: true},
+		{name: "returns true when Accept is the header recommended by the spec", accept: "application/graphql-response+json, application/json;q=0.9", want: true},
+		{name: "returns false when application/json is listed first with an equal q-value", accept: "application/json, application/graphql-response+json", want: false},
+		{name: "returns false when application/json has a higher q-value", accept: "application/graphql-response+json;q=0.5, application/json", want: false},
+		{name: "returns true when graphql-response+json has the highest q-value among the JSON types and text/event-stream is preferred", accept: "text/event-stream, application/json;q=0.5, application/graphql-response+json;q=0.8", want: true},
+		{name: "returns true when the media type uses mixed case", accept: "Application/GraphQL-Response+JSON", want: true},
+		{name: "returns false when graphql-response+json has q=0", accept: "application/graphql-response+json;q=0", want: false},
+		{name: "returns false when graphql-response+json has q=0 and */* has q=1", accept: "application/graphql-response+json;q=0, */*;q=1", want: false},
+		{name: "returns false when */* has a higher q-value than graphql-response+json", accept: "*/*, application/graphql-response+json;q=0.5", want: false},
+		{name: "returns false when application/* has a higher q-value than graphql-response+json", accept: "application/*, application/graphql-response+json;q=0.5", want: false},
+		{name: "returns true when graphql-response+json has a higher q-value than */*", accept: "application/graphql-response+json, */*;q=0.8", want: true},
+		{name: "returns true when application/json has q=0 and graphql-response+json has a positive q-value", accept: "application/json;q=0, application/graphql-response+json;q=0.1", want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &http.Request{URL: &url.URL{}, Header: http.Header{}}
+			if tt.accept != "" {
+				r.Header.Set("Accept", tt.accept)
+			}
+			assert.Equal(t, tt.want, acceptsGraphQLResponseJSON(r))
+		})
+	}
 }

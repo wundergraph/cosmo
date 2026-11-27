@@ -261,3 +261,122 @@ func TestGraphQLOverHTTPStatusCodes(t *testing.T) {
 		})
 	})
 }
+
+// TestGraphQLResponseMediaType verifies that clients accepting application/graphql-response+json
+// get that media type and the status codes of the GraphQL over HTTP spec, even with the default
+// legacy status codes. See https://http-spec.graphql.org/September2026/#sec-application-graphql-response-json
+func TestGraphQLResponseMediaType(t *testing.T) {
+	t.Parallel()
+
+	const (
+		jsonContentType            = "application/json; charset=utf-8"
+		graphqlResponseContentType = "application/graphql-response+json; charset=utf-8"
+		introspectionDisabledBody  = `{"errors":[{"message":"GraphQL introspection is disabled by Cosmo Router, but the query contained __schema or __type. To enable introspection, set introspection_enabled: true in the Router configuration"}]}`
+	)
+
+	testenv.Run(t, &testenv.Config{
+		NoRetryClient: true,
+		ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+			securityConfiguration.BlockSubscriptions = config.BlockOperationConfiguration{
+				Enabled:   true,
+				Condition: "request.header.Get('X-Block') == 'subscription'",
+			}
+		},
+		RouterOptions: []core.Option{
+			core.WithIntrospection(false, config.IntrospectionConfiguration{Enabled: false}),
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		tests := []struct {
+			name                string
+			accept              string
+			query               string
+			expectedBody        string
+			expectedStatus      int
+			expectedContentType string
+		}{
+			{
+				name:                "returns graphql-response+json with status 200 for a successful query when Accept is graphql-response+json",
+				accept:              "application/graphql-response+json",
+				query:               `{ employee(id: 1) { id } }`,
+				expectedBody:        `{"data":{"employee":{"id":1}}}`,
+				expectedStatus:      http.StatusOK,
+				expectedContentType: graphqlResponseContentType,
+			},
+			{
+				name:                "returns graphql-response+json with status 403 for a disabled introspection query when Accept prefers graphql-response+json",
+				accept:              "application/graphql-response+json, application/json;q=0.9",
+				query:               `{ __schema { __typename } }`,
+				expectedBody:        introspectionDisabledBody,
+				expectedStatus:      http.StatusForbidden,
+				expectedContentType: graphqlResponseContentType,
+			},
+			{
+				name:                "returns application/json with status 200 for a disabled introspection query when Accept is application/json",
+				accept:              "application/json",
+				query:               `{ __schema { __typename } }`,
+				expectedBody:        introspectionDisabledBody,
+				expectedStatus:      http.StatusOK,
+				expectedContentType: jsonContentType,
+			},
+			{
+				name:                "returns application/json with status 200 for a disabled introspection query when there is no Accept header",
+				query:               `{ __schema { __typename } }`,
+				expectedBody:        introspectionDisabledBody,
+				expectedStatus:      http.StatusOK,
+				expectedContentType: jsonContentType,
+			},
+			{
+				name:                "returns application/json for a successful query when Accept gives application/json a higher q-value",
+				accept:              "application/graphql-response+json;q=0.5, application/json",
+				query:               `{ employee(id: 1) { id } }`,
+				expectedBody:        `{"data":{"employee":{"id":1}}}`,
+				expectedStatus:      http.StatusOK,
+				expectedContentType: jsonContentType,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				header := http.Header{}
+				if tt.accept != "" {
+					header.Set("Accept", tt.accept)
+				}
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: tt.query, Header: header})
+				require.NoError(t, err)
+				require.Equal(t, tt.expectedBody, res.Body)
+				require.Equal(t, tt.expectedStatus, res.Response.StatusCode)
+				require.Equal(t, tt.expectedContentType, res.Response.Header.Get("Content-Type"))
+			})
+		}
+
+		t.Run("streams a subscription as text/event-stream when Accept lists text/event-stream before graphql-response+json", func(t *testing.T) {
+			t.Parallel()
+
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:  `subscription { countEmp2(max: 1, intervalMilliseconds: 10) }`,
+				Header: http.Header{"Accept": []string{"text/event-stream, application/graphql-response+json"}},
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "text/event-stream", res.Response.Header.Get("Content-Type"))
+		})
+
+		t.Run("returns status 200 for a blocked subscription when the error is streamed as text/event-stream", func(t *testing.T) {
+			t.Parallel()
+
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `subscription { countEmp2(max: 1, intervalMilliseconds: 10) }`,
+				Header: http.Header{
+					"Accept":  []string{"text/event-stream, application/graphql-response+json"},
+					"X-Block": []string{"subscription"},
+				},
+			})
+			require.NoError(t, err)
+			require.Equal(t, "event: next\ndata: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", res.Body)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "text/event-stream", res.Response.Header.Get("Content-Type"))
+		})
+	})
+}

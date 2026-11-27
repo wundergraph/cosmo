@@ -96,9 +96,10 @@ func TestDeferAcceptHeader(t *testing.T) {
 		testenv.Run(t, &testenv.Config{NoRetryClient: true}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, body := send(t, xEnv, "multipart/mixed;deferSpec=20220824,application/graphql-response+json,application/json;q=0.9")
 
-			assert.Equal(t, http.StatusOK, res.StatusCode)
-			assert.True(t, strings.HasPrefix(res.Header.Get("Content-Type"), "application/json"),
-				"expected application/json, got %q", res.Header.Get("Content-Type"))
+			// The client accepts application/graphql-response+json, so the error uses
+			// that media type and the status code of the GraphQL over HTTP spec.
+			assert.Equal(t, http.StatusNotAcceptable, res.StatusCode)
+			assert.Equal(t, "application/graphql-response+json; charset=utf-8", res.Header.Get("Content-Type"))
 			assert.Equal(t, `{"errors":[{"message":"the router received a query with the @defer directive but the client requested the incremental delivery format 'deferSpec=20220824', while the router implements 'incrementalSpec=v0.2'. Use a client that supports this format, for example Apollo Client with GraphQL17Alpha9Handler","extensions":{"code":"DEFER_UNSUPPORTED_SPEC"}}]}`, body)
 		})
 	})
