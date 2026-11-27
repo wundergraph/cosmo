@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 import { DualBlobStorage } from '../src/core/blobstorage/dual.js';
-import type { BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
+import { BlobNotFoundError, type BlobObject, type BlobStorage } from '../src/core/blobstorage/index.js';
 
 function createMockBlobStorage(overrides?: Partial<BlobStorage>): BlobStorage {
   return {
@@ -84,6 +84,27 @@ describe('DualBlobStorage', () => {
   });
 
   describe('getObject', () => {
+    test.each([
+      [true, true],
+      [true, false],
+      [false, true],
+    ])(
+      'reports missing only when both stores confirm it (primary: %s, secondary: %s)',
+      async (primaryMissing, secondaryMissing) => {
+        const primaryError = primaryMissing ? new BlobNotFoundError('missing') : new Error('storage unavailable');
+        const secondaryError = secondaryMissing ? new BlobNotFoundError('missing') : new Error('storage unavailable');
+        const dual = new DualBlobStorage(
+          createMockBlobStorage({ getObject: vi.fn().mockRejectedValue(primaryError) }),
+          createMockBlobStorage({ getObject: vi.fn().mockRejectedValue(secondaryError) }),
+        );
+        if (primaryMissing && secondaryMissing) {
+          await expect(dual.getObject({ key: 'k' })).rejects.toBeInstanceOf(BlobNotFoundError);
+        } else {
+          await expect(dual.getObject({ key: 'k' })).rejects.toMatchObject({ errors: [primaryError, secondaryError] });
+        }
+      },
+    );
+
     test('returns primary result when primary succeeds', async () => {
       const primaryResult: BlobObject = { stream: new ReadableStream(), metadata: { source: 'primary' } };
       const primary = createMockBlobStorage({
