@@ -595,7 +595,7 @@ func TestRedisCacheNoDanglingEntries(t *testing.T) {
 		require.Positive(t, mr.TTL(entryKey(item.Key)))
 		require.LessOrEqual(t, mr.TTL(entryKey(item.Key)), writeLease, "but only for the lease")
 
-		mr.FastForward(writeLease)
+		fastForward(mr, writeLease)
 		require.False(t, mr.Exists(entryKey(item.Key)))
 	})
 

@@ -387,12 +387,13 @@ The cache keeps two kinds of Redis key:
 - whether the entry is public, and whether it is shared-only
 - how much shorter the browser lifetime is than the stored lifetime
 - a token naming the write that stored it, so a writer only ever changes its own entry
+- the time the entry expires
 
 The headers of the subgraph response, including its `Cache-Control`, are not stored. For a subgraph response with a `Vary` header, the entry at the key holds the list of header names instead, and the data sits under a second key that adds the vary part.
 
 **Tag sets.** An [invalidation](/router/response-cache/invalidation#how-an-invalidation-runs) needs to find every entry with a given tag. Each tag therefore has a sorted set listing the keys of its entries. A set member's score is the time that entry expires. Members more than five minutes past expiry are removed on the next write. The set itself expires five minutes after its last member.
 
-**Reads.** A lookup sends `GET` and `PTTL` for each key in one batch. `PTTL` returns the time the entry has left, which becomes the lifetime reported to the client.
+**Reads.** On a single Redis node, a lookup reads every key with one `MGET`. On Redis Cluster, it sends a `GET` for each key in one batch. Each entry carries the time it expires, and the time it has left becomes the lifetime reported to the client. That time is taken with the reading router's clock, so clock skew between routers shifts the reported lifetime by the same amount. Redis still deletes the entry on its own clock. Entries written by an earlier router version are still read, with an extra `PTTL` for each.
 
 **Writes.** An entry without tags is one `SET` with its lifetime. An entry with tags takes up to three round trips, so that an invalidation running at the same time cannot be missed:
 
@@ -404,4 +405,4 @@ An entry with a lifetime of 10 seconds or less is written with its full lifetime
 
 A write that times out is counted as failed, but can still land. An untagged entry then lives its full lifetime. A tagged entry is removed, kept for its lease, or kept for its full lifetime, depending on the step that timed out.
 
-**Cluster.** Redis Cluster spreads keys over nodes by hash slot, and one command cannot touch keys in different slots. Every command the cache sends touches one key, so it works with any key layout. Keys use no hash tags.
+**Cluster.** Redis Cluster spreads keys over nodes by hash slot, and one command cannot touch keys in different slots. Every command the cache sends to a cluster touches one key, so it works with any key layout. `MGET` is only sent to a single node. Keys use no hash tags.

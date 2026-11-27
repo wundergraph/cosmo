@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -49,6 +50,27 @@ func newTestRedisCacheWithHook(t *testing.T, hooks ...redis.Hook) (*RedisCache, 
 func newTestRedisCacheOn(t *testing.T, mr *miniredis.Miniredis, hooks ...redis.Hook) *RedisCache {
 	t.Helper()
 
+	return newTestCacheOn(t, mr, false, hooks...)
+}
+
+// newTestPipelinedRedisCache is newTestRedisCacheWithHook reading with a
+// pipeline of GETs, as it does on a cluster, rather than with one MGET.
+func newTestPipelinedRedisCache(t *testing.T, hooks ...redis.Hook) (*RedisCache, *miniredis.Miniredis) {
+	t.Helper()
+
+	mr := miniredis.RunT(t)
+	return newTestCacheOn(t, mr, true, hooks...), mr
+}
+
+// pipelinedClient hides the *redis.Client under it, so the cache cannot tell
+// it is a single node.
+type pipelinedClient struct{ redis.UniversalClient }
+
+// newTestCacheOn builds a cache against mr reading the clock fastForward moves
+// along with mr's TTLs, pipelined or not.
+func newTestCacheOn(t *testing.T, mr *miniredis.Miniredis, pipelined bool, hooks ...redis.Hook) *RedisCache {
+	t.Helper()
+
 	// miniredis interprets every script, so a batch of a thousand items can
 	// take seconds on a loaded CI runner: past go-redis' 3s read timeout.
 	client := redis.NewClient(&redis.Options{Addr: mr.Addr(), ReadTimeout: 30 * time.Second})
@@ -59,19 +81,67 @@ func newTestRedisCacheOn(t *testing.T, mr *miniredis.Miniredis, hooks ...redis.H
 	for _, hook := range hooks {
 		client.AddHook(hook)
 	}
-	c, err := NewRedisCache(t.Context(), client, testPrefix)
+	var universal redis.UniversalClient = client
+	if pipelined {
+		universal = pipelinedClient{client}
+	}
+
+	c, err := NewRedisCache(t.Context(), universal, testPrefix)
 	if err != nil {
 		// Ownership never transferred, so the client is still the test's to
 		// close before it gives up.
 		require.NoError(t, client.Close())
 		require.NoError(t, err)
 	}
+	c.now = clockFor(mr).Now
 
 	t.Cleanup(func() {
 		require.NoError(t, c.Close())
+		testClocks.Delete(mr)
 	})
 
 	return c
+}
+
+// testClock is the router clock of every cache on one server. It stands still
+// unless advanced, as miniredis' TTLs only move by FastForward, and starts on a
+// whole millisecond, so the lifetime a read reports is exact.
+type testClock struct {
+	mu  sync.Mutex
+	now time.Time
+}
+
+func (c *testClock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.now
+}
+
+// advance moves the router clock alone, as when it runs ahead of the server's.
+func (c *testClock) advance(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.now = c.now.Add(d)
+}
+
+var testClocks sync.Map
+
+// clockFor is the router clock of the caches on mr.
+func clockFor(mr *miniredis.Miniredis) *testClock {
+	clock, _ := testClocks.LoadOrStore(mr, &testClock{now: time.Now().Truncate(time.Millisecond)})
+	return clock.(*testClock)
+}
+
+// fastForward moves mr's TTLs, and the clock of the caches on it, forward by d.
+func fastForward(mr *miniredis.Miniredis, d time.Duration) {
+	clockFor(mr).advance(d)
+	mr.FastForward(d)
+}
+
+// entryBody is a stored entry without its header.
+func entryBody(stored []byte) []byte {
+	body, _, _ := readEntry(stored)
+	return body
 }
 
 // expirePTTL rewrites every PTTL reply to the -2 redis sends for a key that is
@@ -131,7 +201,18 @@ func (c cutRepliesAfter) ProcessPipelineHook(next redis.ProcessPipelineHook) red
 	}
 }
 
+// TestRedisCache runs on a single node, which reads with one MGET.
 func TestRedisCache(t *testing.T) {
+	testRedisCache(t, newTestRedisCache)
+}
+
+// TestRedisCachePipelined runs the same cases reading the way a cluster does,
+// with a pipeline of GETs.
+func TestRedisCachePipelined(t *testing.T) {
+	testRedisCache(t, func(t *testing.T) (*RedisCache, *miniredis.Miniredis) { return newTestPipelinedRedisCache(t) })
+}
+
+func testRedisCache(t *testing.T, newCache func(t *testing.T) (*RedisCache, *miniredis.Miniredis)) {
 	t.Parallel()
 
 	ctx := t.Context()
@@ -174,7 +255,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("round trips through redis", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Hour},
@@ -191,7 +272,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("surrogateKeys come back with the entry", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			surrogateKeys := []enginecache.SurrogateKey{
 				enginecache.SubgraphSurrogateKey("accounts"), enginecache.TypeSurrogateKey("accounts", "User"),
@@ -212,7 +293,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("a vary record comes back as a record", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			vary := [][]string{{"accept-language"}, {"accept-language", "x-region"}}
 			err := c.SetMany(ctx, []enginecache.Item{
@@ -237,7 +318,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("a value not in the entry format fails the batch", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			require.NoError(t, mr.Set(c.entryKey("raw"), `{"id":42}`))
 			mr.SetTTL(c.entryKey("raw"), time.Hour)
@@ -272,7 +353,7 @@ func TestRedisCache(t *testing.T) {
 			// Twice here, and a third time from the cleanup the helper
 			// registered, so a second shutdown path reaching it is answered the
 			// same as the first rather than with go-redis' already-closed.
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 			require.NoError(t, c.Close())
 			require.NoError(t, c.Close())
 		})
@@ -284,7 +365,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("nil items is an error", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, nil)
 			require.ErrorIs(t, err, enginecache.ErrNoItems)
@@ -294,7 +375,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("empty items is an error", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{})
 			require.ErrorIs(t, err, enginecache.ErrNoItems)
@@ -304,7 +385,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("stores multiple items with their own TTLs", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("1"), TTL: time.Minute},
@@ -325,7 +406,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("namespaces keys with the prefix", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Minute},
@@ -338,7 +419,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("duplicate key in one batch, last one wins", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("first"), TTL: time.Minute},
@@ -359,7 +440,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("overwriting replaces value and TTL", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("old"), TTL: time.Minute},
@@ -383,7 +464,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("rejects an item with no TTL", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{{Key: "a", Value: []byte("value")}})
 			require.ErrorIs(t, err, enginecache.ErrMissingTTL)
@@ -394,7 +475,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("rejects an item with a negative TTL", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: -time.Minute},
@@ -406,7 +487,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("one item with an invalid TTL rejects the whole batch", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			// The items with a valid TTL sit on both sides of the invalid one,
 			// so an implementation that queued as it went would leave traces.
@@ -424,7 +505,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("one item with an unknown key tier rejects the whole batch", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "before", Value: []byte("1"), TTL: time.Minute, Tags: []string{"t"}},
@@ -441,7 +522,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("reports a failure to reach redis", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 			mr.Close()
 
 			err := c.SetMany(ctx, []enginecache.Item{
@@ -514,7 +595,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("an invalid TTL is not a partial write", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			// This one fails before anything is sent, so unlike every other
 			// failure it really does mean nothing was written.
@@ -536,7 +617,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("nil keys is an error", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			results, err := c.GetMany(ctx, nil)
 			require.ErrorIs(t, err, enginecache.ErrNoKeys)
@@ -546,7 +627,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("empty keys is an error", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			results, err := c.GetMany(ctx, []string{})
 			require.ErrorIs(t, err, enginecache.ErrNoKeys)
@@ -556,7 +637,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("misses are absent from the map, never an error", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			results, err := c.GetMany(ctx, []string{"a", "b", "c"})
 			require.NoError(t, err)
@@ -570,7 +651,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("reads through the prefix", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			// Written straight to redis, bypassing SetMany. The expiry has to be
 			// set by hand too, a key without one is never served.
@@ -587,7 +668,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("entries are keyed and named by what the caller asked with, not the prefixed key", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Minute},
@@ -607,7 +688,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("an unprefixed key is not visible", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			require.NoError(t, mr.Set("a", "value"))
 
@@ -619,7 +700,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("only the keys that were found come back", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "hit-1", Value: []byte("1"), TTL: time.Minute},
@@ -641,7 +722,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("a repeated key yields the one entry", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Minute},
@@ -660,7 +741,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("a cached empty value is not a miss", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "empty", Value: []byte{}, TTL: time.Minute},
@@ -685,7 +766,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("reports a failure to reach redis", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 			mr.Close()
 
 			results, err := c.GetMany(ctx, []string{"a"})
@@ -697,17 +778,31 @@ func TestRedisCache(t *testing.T) {
 		t.Run("one failed key fails the whole batch", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
-
-			// A hash where a string is expected, so GET returns WRONGTYPE. The
-			// leading miss makes redis.Nil the error Exec reports, so the
-			// per-command failure is only caught while reading the results.
+			// Read with a pipeline, as on a cluster: a hash where a string is
+			// expected, so GET returns WRONGTYPE. The leading miss makes
+			// redis.Nil the error Exec reports, so the per-command failure is
+			// only caught while reading the results.
+			c, mr := newTestPipelinedRedisCache(t)
 			mr.HSet(entryKey("wrong-type"), "field", "value")
 
 			results, err := c.GetMany(ctx, []string{"missing", "wrong-type"})
 			require.Error(t, err)
 			require.ErrorContains(t, err, "wrong-type")
 			require.Nil(t, results)
+		})
+
+		t.Run("a key of another type is a miss to an MGET", func(t *testing.T) {
+			t.Parallel()
+
+			// MGET answers nil for a key that holds no string, so on a single
+			// node it is a miss, not this cache's to serve, and left in place.
+			c, mr := newTestRedisCacheWithHook(t)
+			mr.HSet(entryKey("wrong-type"), "field", "value")
+
+			results, err := c.GetMany(ctx, []string{"missing", "wrong-type"})
+			require.NoError(t, err)
+			require.Empty(t, results)
+			require.True(t, mr.Exists(entryKey("wrong-type")))
 		})
 	})
 
@@ -717,14 +812,14 @@ func TestRedisCache(t *testing.T) {
 		t.Run("before expiry is a hit", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Minute},
 			})
 			require.NoError(t, err)
 
-			mr.FastForward(30 * time.Second)
+			fastForward(mr, 30*time.Second)
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -734,7 +829,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("past expiry is a miss", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Minute},
@@ -742,7 +837,7 @@ func TestRedisCache(t *testing.T) {
 			require.NoError(t, err)
 
 			// Redis owns expiry, so the key is gone without a sweep here.
-			mr.FastForward(2 * time.Minute)
+			fastForward(mr, 2*time.Minute)
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -753,7 +848,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("expiry only drops the expired keys", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "short", Value: []byte("1"), TTL: time.Minute},
@@ -761,7 +856,7 @@ func TestRedisCache(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			mr.FastForward(2 * time.Minute)
+			fastForward(mr, 2*time.Minute)
 
 			results, err := c.GetMany(ctx, []string{"short", "long"})
 			require.NoError(t, err)
@@ -772,14 +867,14 @@ func TestRedisCache(t *testing.T) {
 		t.Run("a hit reports the lifetime it has left", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Minute},
 			})
 			require.NoError(t, err)
 
-			mr.FastForward(20 * time.Second)
+			fastForward(mr, 20*time.Second)
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -790,7 +885,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("the reported TTL shrinks as the entry ages", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Minute},
@@ -803,7 +898,7 @@ func TestRedisCache(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, time.Minute, first["a"].TTL)
 
-			mr.FastForward(20 * time.Second)
+			fastForward(mr, 20*time.Second)
 
 			second, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -813,7 +908,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("each key reports its own remaining lifetime", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "short", Value: []byte("1"), TTL: time.Minute},
@@ -821,7 +916,7 @@ func TestRedisCache(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			mr.FastForward(30 * time.Second)
+			fastForward(mr, 30*time.Second)
 
 			results, err := c.GetMany(ctx, []string{"short", "long"})
 			require.NoError(t, err)
@@ -834,7 +929,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("a miss reports no TTL", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
@@ -844,7 +939,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("a key with no expiry is not a hit", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			// SetMany refuses an item without a TTL, so a key sitting in the
 			// namespace with no expiry was put there by something else and is
@@ -862,7 +957,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("a sub-millisecond remainder is not a hit", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			// PTTL answers in whole milliseconds, so anything shorter rounds
 			// down to nothing left. Seeded by hand because a SetMany of this
@@ -875,15 +970,34 @@ func TestRedisCache(t *testing.T) {
 			require.NotContains(t, results, "a")
 		})
 
-		t.Run("a key that expires between the read and the TTL lookup is a miss", func(t *testing.T) {
+		t.Run("an entry past the expiry it carries is a miss while redis still holds it", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCacheWithHook(t, expirePTTL{})
+			c, mr := newCache(t)
 
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Minute},
 			})
 			require.NoError(t, err)
+
+			// Only the router's clock moves, as when it runs ahead of the
+			// node's: the bytes in hand have outlived their entry. That is a
+			// miss, never an error.
+			clockFor(mr).advance(2 * time.Minute)
+
+			results, err := c.GetMany(ctx, []string{"a"})
+			require.NoError(t, err)
+			require.NotContains(t, results, "a")
+			require.True(t, mr.Exists(entryKey("a")))
+		})
+
+		t.Run("a legacy entry that expires between the read and the TTL lookup is a miss", func(t *testing.T) {
+			t.Parallel()
+
+			c, mr := newTestRedisCacheWithHook(t, expirePTTL{})
+
+			require.NoError(t, mr.Set(entryKey("a"), rawEntry("value")))
+			mr.SetTTL(entryKey("a"), time.Minute)
 
 			// The GET found the value and the PTTL then found nothing, so the
 			// bytes in hand have already outlived their entry. That is a miss,
@@ -912,7 +1026,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("GetMany on a cancelled context", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			cancelledCtx := cancelled()
 
@@ -924,7 +1038,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("GetMany on an expired deadline", func(t *testing.T) {
 			t.Parallel()
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			expiredCtx := expired(t)
 
@@ -936,7 +1050,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("SetMany on a cancelled context stores nothing", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			cancelledCtx := cancelled()
 
@@ -951,7 +1065,7 @@ func TestRedisCache(t *testing.T) {
 		t.Run("SetMany on an expired deadline stores nothing", func(t *testing.T) {
 			t.Parallel()
 
-			c, mr := newTestRedisCache(t)
+			c, mr := newCache(t)
 
 			expiredCtx := expired(t)
 
@@ -968,7 +1082,7 @@ func TestRedisCache(t *testing.T) {
 			liveCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			t.Cleanup(cancel)
 
-			c, _ := newTestRedisCache(t)
+			c, _ := newCache(t)
 
 			err := c.SetMany(liveCtx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Minute},
@@ -996,7 +1110,7 @@ func TestRedisCacheKeepsClientDirectives(t *testing.T) {
 	require.Equal(t, 50*time.Second, got["k"].ClientTTL)
 
 	// ClientTTL counts down with TTL.
-	mr.FastForward(20 * time.Second)
+	fastForward(mr, 20*time.Second)
 	got, err = c.GetMany(t.Context(), []string{"k"})
 	require.NoError(t, err)
 	require.Equal(t, 40*time.Second, got["k"].TTL)
