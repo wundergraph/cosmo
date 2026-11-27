@@ -673,7 +673,7 @@ describe('@interfaceObject tests', () => {
     );
   });
 
-  test('that the router configuration merges @external key fields from Interface Objects for each concrete type', () => {
+  test('that the router configuration merges keys and @external fields from Interface Objects for each concrete type', () => {
     const accounts = createSubgraph(
       'accounts',
       `
@@ -726,8 +726,10 @@ describe('@interfaceObject tests', () => {
     const adminConfig = profilesConfig?.configurationDataByTypeName.get('Admin');
     const memberConfig = profilesConfig?.configurationDataByTypeName.get('Member');
 
+    expect(adminConfig?.keys?.map((key) => key.selectionSet).sort()).toStrictEqual(['accountId', 'handle', 'id']);
     expect(adminConfig?.externalFieldNames).toStrictEqual(new Set(['id', 'accountId']));
     expect(adminConfig?.fieldNames).toStrictEqual(new Set(['handle']));
+    expect(memberConfig?.keys?.map((key) => key.selectionSet).sort()).toStrictEqual(['handle', 'id']);
     expect(memberConfig?.externalFieldNames).toStrictEqual(new Set(['id']));
     expect(memberConfig?.fieldNames).toStrictEqual(new Set(['handle']));
   });
