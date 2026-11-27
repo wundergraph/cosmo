@@ -20,19 +20,8 @@ const MIN_INACTIVITY_DAYS = 90;
 // How long should we wait before deleting the organization?
 const DELAY_FOR_ORG_DELETION_IN_DAYS = 7;
 
-const {
-  realm,
-  loginRealm,
-  apiUrl,
-  adminUser,
-  adminPassword,
-  clientId,
-  databaseConnectionUrl,
-  databaseTlsCa,
-  databaseTlsCert,
-  databaseTlsKey,
-  redis,
-} = getConfig();
+const { realm, loginRealm, apiUrl, adminUser, adminPassword, clientId, databaseConnectionUrl, databaseTls, redis } =
+  getConfig();
 
 // Create the redis connection.
 const { redisQueue, redisWorker } = await createRedisConnections({
@@ -44,10 +33,7 @@ const { redisQueue, redisWorker } = await createRedisConnections({
 
 // Create the database connection. TLS is optional.
 const connectionConfig = await buildDatabaseConnectionConfig({
-  tls:
-    databaseTlsCa || databaseTlsCert || databaseTlsKey
-      ? { ca: databaseTlsCa, cert: databaseTlsCert, key: databaseTlsKey }
-      : undefined,
+  tls: databaseTls,
 });
 
 const queryConnection = postgres(databaseConnectionUrl, { ...connectionConfig });

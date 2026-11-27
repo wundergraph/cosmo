@@ -18,18 +18,8 @@ const NUMBER_OF_USERS_PER_PAGE = 500;
 // Any user created after this date will be ignored
 const CREATED_NOT_AFTER = startOfMonth(subDays(new Date(), 60));
 
-const {
-  realm,
-  loginRealm,
-  adminUser,
-  adminPassword,
-  clientId,
-  apiUrl,
-  databaseConnectionUrl,
-  databaseTlsCa,
-  databaseTlsCert,
-  databaseTlsKey,
-} = getConfig();
+const { realm, loginRealm, adminUser, adminPassword, clientId, apiUrl, databaseConnectionUrl, databaseTls } =
+  getConfig();
 
 const keycloakClient = new Keycloak({
   apiUrl,
@@ -64,10 +54,7 @@ try {
 
   // Create the database connection. TLS is optional.
   const connectionConfig = await buildDatabaseConnectionConfig({
-    tls:
-      databaseTlsCa || databaseTlsCert || databaseTlsKey
-        ? { ca: databaseTlsCa, cert: databaseTlsCert, key: databaseTlsKey }
-        : undefined,
+    tls: databaseTls,
   });
 
   const queryConnection = postgres(databaseConnectionUrl, { ...connectionConfig });

@@ -13,18 +13,11 @@ const CUTOFF_DATE = startOfDay(subDays(new Date(), 90));
 const ITEMS_PER_CHUNK = 500;
 const NUMBER_OF_PARALLEL_TRANSACTIONS = 10;
 
-const { databaseConnectionUrl, databaseTlsCa, databaseTlsCert, databaseTlsKey } = getConfig();
+const { databaseConnectionUrl, databaseTls } = getConfig();
 
 // Create the database connection. TLS is optional.
 const connectionConfig = await buildDatabaseConnectionConfig({
-  tls:
-    databaseTlsCa || databaseTlsCert || databaseTlsKey
-      ? {
-          ca: databaseTlsCa,
-          cert: databaseTlsCert,
-          key: databaseTlsKey,
-        }
-      : undefined,
+  tls: databaseTls,
 });
 
 const queryConnection = postgres(databaseConnectionUrl, { ...connectionConfig });

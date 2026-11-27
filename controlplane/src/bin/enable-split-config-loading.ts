@@ -21,9 +21,7 @@ import { getConfig } from './get-config.js';
 
 const {
   databaseConnectionUrl,
-  databaseTlsCa,
-  databaseTlsCert,
-  databaseTlsKey,
+  databaseTls,
   s3Storage,
   s3StorageFailover,
   webhookProxyUrl,
@@ -46,10 +44,7 @@ let queryConnection: Sql | undefined;
 try {
   // Create the database connection. TLS is optional.
   const connectionConfig = await buildDatabaseConnectionConfig({
-    tls:
-      databaseTlsCa || databaseTlsCert || databaseTlsKey
-        ? { ca: databaseTlsCa, cert: databaseTlsCert, key: databaseTlsKey }
-        : undefined,
+    tls: databaseTls,
   });
 
   queryConnection = postgres(databaseConnectionUrl, { ...connectionConfig });

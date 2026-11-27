@@ -1,12 +1,19 @@
 import { and, asc, eq, not } from 'drizzle-orm';
 import { z } from 'zod';
 import type { DB } from '../../db/index.js';
-import { billingPlans, billingSubscriptions, organizationBilling } from '../../db/schema.js';
-import { BillingPlanDTO } from '../../types/index.js';
+import { billingPlans, billingSubscriptions, Feature, organizationBilling } from '../../db/schema.js';
+import type { NewBillingPlan } from '../../db/models.js';
+import { BillingPlanDTO, featureIds } from '../../types/index.js';
 import { BillingService } from '../services/BillingService.js';
 import { traced } from '../tracing.js';
 
-export const billingSchema = z.object({
+/**
+ * Listed on the pricing page but never checked by the controlplane, so they are not FeatureIds. The billing_plans
+ * column is still typed as Feature[], which is why upsertPlans casts.
+ */
+const displayOnlyFeatureIds = ['retention', 'router', 'sla'] as const;
+
+const billingSchema = z.object({
   plans: z.record(
     z.string(),
     z.object({
@@ -17,7 +24,7 @@ export const billingSchema = z.object({
       stripePriceId: z.string().optional(),
       features: z.array(
         z.object({
-          id: z.string(),
+          id: z.enum([...featureIds, ...displayOnlyFeatureIds]),
           description: z.string().optional(),
           limit: z.number().optional(),
         }),
@@ -25,6 +32,7 @@ export const billingSchema = z.object({
     }),
   ),
 });
+
 /**
  * BillingRepository for billing related operations.
  */
@@ -54,6 +62,26 @@ export class BillingRepository {
           limit?: number;
         }[],
       };
+    });
+  }
+
+  public async upsertPlans(config: unknown) {
+    const { plans } = billingSchema.parse(config);
+
+    await this.db.transaction(async (tx) => {
+      for (const [id, plan] of Object.entries(plans)) {
+        const values: NewBillingPlan = {
+          id,
+          ...plan,
+          stripePriceId: plan.stripePriceId ?? null,
+          features: plan.features as Feature[],
+        };
+
+        await tx.insert(billingPlans).values(values).onConflictDoUpdate({
+          target: billingPlans.id,
+          set: values,
+        });
+      }
     });
   }
 

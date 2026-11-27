@@ -14,18 +14,8 @@ import { defaultGroupDescription } from '../core/test-util.js';
 import OidcProvider from '../core/services/OidcProvider.js';
 import { getConfig } from './get-config.js';
 
-const {
-  realm,
-  loginRealm,
-  adminUser,
-  adminPassword,
-  clientId,
-  apiUrl,
-  databaseConnectionUrl,
-  databaseTlsCa,
-  databaseTlsCert,
-  databaseTlsKey,
-} = getConfig();
+const { realm, loginRealm, adminUser, adminPassword, clientId, apiUrl, databaseConnectionUrl, databaseTls } =
+  getConfig();
 
 // Number of concurrent tasks. We'll allocate the same number of database connections + 1, so keep this number reasonable
 const MAX_DEGREE_OF_PARALLELISM = 5;
@@ -54,10 +44,7 @@ try {
 
   // Create the database connection. TLS is optional.
   const connectionConfig = await buildDatabaseConnectionConfig({
-    tls:
-      databaseTlsCa || databaseTlsCert || databaseTlsKey
-        ? { ca: databaseTlsCa, cert: databaseTlsCert, key: databaseTlsKey }
-        : undefined,
+    tls: databaseTls,
   });
   const queryConnection = postgres(databaseConnectionUrl, {
     ...connectionConfig,

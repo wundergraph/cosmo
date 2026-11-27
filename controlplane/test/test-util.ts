@@ -1,5 +1,5 @@
 import { createHash, randomUUID, UUID } from 'node:crypto';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import fs from 'node:fs';
 import { createClient, Client } from '@connectrpc/connect';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
@@ -8,7 +8,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { formatISO, startOfTomorrow, startOfYear } from 'date-fns';
-import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import Fastify from 'fastify';
 import { pino } from 'pino';
 import postgres from 'postgres';
@@ -20,7 +20,7 @@ import ScimController from '../src/core/controllers/scim.js';
 import database from '../src/core/plugins/database.js';
 import fastifyRedis from '../src/core/plugins/redis.js';
 import { ApiKeyRepository } from '../src/core/repositories/ApiKeyRepository.js';
-import { BillingRepository, billingSchema } from '../src/core/repositories/BillingRepository.js';
+import { BillingRepository } from '../src/core/repositories/BillingRepository.js';
 import { NamespaceLoginMethodRepository } from '../src/core/repositories/NamespaceLoginMethodRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { UserRepository } from '../src/core/repositories/UserRepository.js';
@@ -42,8 +42,9 @@ import { MockPlatformWebhookService } from '../src/core/webhooks/PlatformWebhook
 import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
 import { DeleteOrganizationQueue } from '../src/core/workers/DeleteOrganizationWorker.js';
 import * as schema from '../src/db/schema.js';
+import billingConfig from '../src/bin/billing.json' with { type: 'json' };
 import { AuthContext, FeatureIds, Label, LoginMethod } from '../src/types/index.js';
-import { NewBillingPlan, OrganizationRole } from '../src/db/models.js';
+import { OrganizationRole } from '../src/db/models.js';
 import { DeactivateOrganizationQueue } from '../src/core/workers/DeactivateOrganizationWorker.js';
 import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from '../src/core/workers/ReactivateOrganizationWorker.js';
@@ -342,7 +343,7 @@ export const SetupTest = async function ({
   }
 
   if (setupBilling) {
-    await seedBilling(queryConnection);
+    await billingRepository.upsertPlans(billingConfig);
     await billingRepository.insertPlan(setupBilling.plan, users.adminAliceCompanyA.organizationId);
   }
 
@@ -1062,41 +1063,6 @@ export type GraphNameAndKey = {
   key: string;
   name: string;
 };
-
-export async function seedBilling(queryConnection: postgres.Sql) {
-  const db = drizzle(queryConnection, { schema: { ...schema } });
-
-  const configPath = resolve(process.cwd(), './src/bin/billing.json');
-
-  const data = fs.readFileSync(configPath, 'utf8');
-  const json = billingSchema.parse(JSON.parse(data));
-
-  const entries = Object.entries(json.plans);
-
-  for (const [id, plan] of entries) {
-    const values: NewBillingPlan = {
-      id,
-      name: plan.name,
-      price: plan.price,
-      active: plan.active,
-      weight: plan.weight,
-      stripePriceId: 'stripePriceId' in plan ? plan.stripePriceId : undefined,
-      features: plan.features.map((feature) => ({
-        ...feature,
-        id: feature.id as FeatureIds,
-      })),
-    };
-
-    await db
-      .insert(schema.billingPlans)
-      .values(values)
-      .onConflictDoUpdate({
-        target: schema.billingPlans.id,
-        set: values,
-      })
-      .execute();
-  }
-}
 
 export async function readBlob(blobStorage: BlobStorage, key: string): Promise<string> {
   const blob = await blobStorage.getObject({ key });

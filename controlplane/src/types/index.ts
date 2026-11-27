@@ -37,35 +37,38 @@ type PlainField<F> =
 export const COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID = 'composition-ignore-external-keys';
 export const SPLIT_CONFIG_LOADING_FEATURE_ID = 'split-config-loading';
 
-export type FeatureIds =
-  | 'users'
-  | 'federated-graphs'
-  | 'analytics-retention'
-  | 'tracing-retention'
-  | 'changelog-retention'
-  | 'breaking-change-retention'
-  | 'trace-sampling-rate'
-  | 'requests'
-  | 'feature-flags'
-  | 'persisted-operations'
+export const featureIds = [
+  'users',
+  'federated-graphs',
+  'analytics-retention',
+  'tracing-retention',
+  'changelog-retention',
+  'breaking-change-retention',
+  'trace-sampling-rate',
+  'requests',
+  'feature-flags',
+  'persisted-operations',
   // Boolean features
-  | 'ai'
-  | 'audit-log-streaming'
-  | 'cache-warmer'
-  | 'composition-ignore-external-keys' // COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID
-  | 'field-pruning-grace-period'
-  | 'login-method-restrictions'
-  | 'oidc'
-  | 'plugins'
-  | 'proposals'
-  | 'rbac'
-  | 'scim'
-  | 'security'
-  | 'sso'
-  | 'subgraph-check-extensions'
-  | 'support'
-  | 'split-config-loading'
-  | 'prompt-to-query';
+  'ai',
+  'audit-log-streaming',
+  'cache-warmer',
+  'composition-ignore-external-keys', // COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID
+  'field-pruning-grace-period',
+  'login-method-restrictions',
+  'oidc',
+  'plugins',
+  'proposals',
+  'rbac',
+  'scim',
+  'security',
+  'sso',
+  'subgraph-check-extensions',
+  'support',
+  'split-config-loading',
+  'prompt-to-query',
+] as const;
+
+export type FeatureIds = (typeof featureIds)[number];
 
 export type Features = {
   [key in FeatureIds]: Feature;

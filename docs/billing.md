@@ -51,6 +51,7 @@ The price is specified in decimal, e.g. `0.00` for free plans and `9.99` for pai
 ### Stripe Price ID
 
 The Stripe Price ID is used to identify the plan in Stripe.
+Stripe webhooks find a subscription's plan by its price, so don't change or remove the price of a plan that has subscribers. Grandfather the plan instead.
 
 ### Weight
 
@@ -63,15 +64,17 @@ Any feature that has a description will be shown in the UI.
 
 ## Syncing to the database
 
-To sync the billing configuration to the database, run the following command:
+When the Helm chart's `jobs.databaseMigration.seedBillingPlans` is `true`, the database migration job syncs `billing.json` on every deploy. Only WunderGraph Cloud sets it.
+
+To sync by hand, run:
 
 ```bash
-cd controlplane && pnpm seed:billing
-
-// or
-
-DATABASE_URL=postgres://... cd controleplane && pnpm seed:billing
+cd controlplane && DB_URL=postgres://... pnpm seed:billing
 ```
+
+Without `DB_URL`, the script syncs the local development database.
+
+Syncing upserts each plan and replaces its features. Plans removed from `billing.json` stay in the database, so deactivate them by setting `active: false` rather than deleting them.
 
 ## Stripe Integration
 
