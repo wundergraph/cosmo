@@ -21,3 +21,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.12
+    ports:
+      - '8123:8123'
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: changeme
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    healthcheck:
+      test: ['CMD', 'clickhouse-client', '--password', 'changeme', '--query', 'SELECT 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5

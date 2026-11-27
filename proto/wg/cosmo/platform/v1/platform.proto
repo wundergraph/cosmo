@@ -934,7 +934,7 @@ enum AnalyticsViewGroupName {
 }
 
 message GetAnalyticsViewRequest {
-  string federatedGraphName  = 1;
+  string federatedGraphName = 1;
   AnalyticsViewGroupName name = 2;
   AnalyticsConfig config = 3;
   string namespace = 4;
@@ -1026,7 +1026,7 @@ message GetAnalyticsViewResponse {
 }
 
 message GetDashboardAnalyticsViewRequest {
-  string federatedGraphName  = 1;
+  string federatedGraphName = 1;
   string startDate = 2;
   string endDate = 3;
   int32 range = 4;
@@ -2752,7 +2752,7 @@ message GetFeatureSubgraphsResponse {
 }
 
 message GetFeatureFlagsByFederatedGraphRequest {
-  string federated_graph_name  = 1;
+  string federated_graph_name = 1;
   int32 limit = 2;
   int32 offset = 3;
   string namespace = 4;
@@ -3824,6 +3824,41 @@ message TestAuditLogStreamConfigResponse {
   Response response = 1;
 }
 
+message GetResponseCacheStatusRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  optional DateRange dateRange = 3;
+}
+
+enum ResponseCacheStatus {
+  UNKNOWN = 0;
+  HIT = 1;
+  PARTIAL_HIT = 2;
+  NOT_CACHEABLE = 3;
+  MISS = 4;
+}
+
+message ResponseCacheStatusCount {
+  ResponseCacheStatus cacheStatus = 1;
+  int64 totalFetches = 2;
+}
+
+message SubgraphResponseCacheStatus {
+  string subgraphId = 1;
+  string subgraphName = 2;
+  int64 totalFetches = 3;
+  int64 nonDeltaPoints = 4;
+  int32 coverageCount = 5;
+  repeated ResponseCacheStatusCount statuses = 6;
+}
+
+message GetResponseCacheStatusResponse {
+  Response response = 1;
+  DateRange interval = 2;
+  int32 coverageCount = 3;
+  repeated SubgraphResponseCacheStatus subgraphs = 4;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -4216,22 +4251,28 @@ service PlatformService {
   rpc ConfigureSubgraphCheckExtensions(ConfigureSubgraphCheckExtensionsRequest) returns (ConfigureSubgraphCheckExtensionsResponse) {}
 
   //
+  // Entity Caching
+  //-----------------------------------------------------------------------------------------------------------------------------
+
+  rpc GetResponseCacheStatus(GetResponseCacheStatusRequest) returns (GetResponseCacheStatusResponse) {}
+
+  //
   // Billing
   //-----------------------------------------------------------------------------------------------------------------------------
   // Return the available billing plans
-  rpc GetBillingPlans(GetBillingPlansRequest) returns (GetBillingPlansResponse) { }
+  rpc GetBillingPlans(GetBillingPlansRequest) returns (GetBillingPlansResponse) {}
   // Create a Stripe checkout session
-  rpc CreateCheckoutSession(CreateCheckoutSessionRequest) returns (CreateCheckoutSessionResponse) { }
+  rpc CreateCheckoutSession(CreateCheckoutSessionRequest) returns (CreateCheckoutSessionResponse) {}
   // Create a Stripe billing portal session
-  rpc CreateBillingPortalSession(CreateBillingPortalSessionRequest) returns (CreateBillingPortalSessionResponse) { }
+  rpc CreateBillingPortalSession(CreateBillingPortalSessionRequest) returns (CreateBillingPortalSessionResponse) {}
   // Upgrade the current plan
-  rpc UpgradePlan(UpgradePlanRequest) returns (UpgradePlanResponse) { }
+  rpc UpgradePlan(UpgradePlanRequest) returns (UpgradePlanResponse) {}
 
   // Router Compatibility Versions
-  rpc ListRouterCompatibilityVersions(ListRouterCompatibilityVersionsRequest) returns (ListRouterCompatibilityVersionsResponse) { }
+  rpc ListRouterCompatibilityVersions(ListRouterCompatibilityVersionsRequest) returns (ListRouterCompatibilityVersionsResponse) {}
 
   // Graph
-  rpc SetGraphRouterCompatibilityVersion(SetGraphRouterCompatibilityVersionRequest) returns (SetGraphRouterCompatibilityVersionResponse) { }
+  rpc SetGraphRouterCompatibilityVersion(SetGraphRouterCompatibilityVersionRequest) returns (SetGraphRouterCompatibilityVersionResponse) {}
 
   // Proposal
   // Create a proposal for a federated graph

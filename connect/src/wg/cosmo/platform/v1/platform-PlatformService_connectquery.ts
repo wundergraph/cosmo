@@ -1214,6 +1214,11 @@ export const getSubgraphCheckExtensionsConfig = PlatformService.method.getSubgra
 export const configureSubgraphCheckExtensions = PlatformService.method.configureSubgraphCheckExtensions;
 
 /**
+ * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetResponseCacheStatus
+ */
+export const getResponseCacheStatus = PlatformService.method.getResponseCacheStatus;
+
+/**
  *
  * Billing
  * -----------------------------------------------------------------------------------------------------------------------------
