@@ -18,14 +18,15 @@ import '../styles/login.css';
 import '../styles/playground.css';
 import '../styles/utils.css';
 import { useEffect } from 'react';
-import { Router } from 'next/router';
 import posthog from 'posthog-js';
 import { PostHogProvider } from 'posthog-js/react';
-import { hasAnalyticsConsent } from '@/hooks/use-analytics-consent';
 import { withErrorBoundary } from '@sentry/nextjs';
 import { Footer } from '@/components/layout/footer';
 import { OnboardingProvider } from '@/components/onboarding/onboarding-provider';
 import { NuqsAdapter } from 'nuqs/adapters/next/pages';
+import { PosthogConsentSync } from '@/components/posthog-consent-sync';
+import { OsanoProvider } from '@/components/osano-provider';
+import { HubspotTrackingScript } from '@/components/hubspot-tracking-script';
 
 const queryClient = new QueryClient();
 
@@ -41,94 +42,42 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
     });
   }, []);
 
-  useEffect(() => {
-    if (posthog.__loaded) return;
-
-    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-      api_host: '/ingest',
-      // Track rejected/default opt-out users anonymously (no cookies); switch to
-      // full tracking only once the user opts in via Osano consent.
-      cookieless_mode: 'on_reject',
-      loaded: (ph) => {
-        if (process.env.NODE_ENV === 'development') ph.debug();
-      },
-      debug: process.env.NODE_ENV === 'development',
-    });
-
-    const handleRouteChange = () => posthog.capture('$pageview');
-    Router.events.on('routeChangeComplete', handleRouteChange);
-
-    return () => {
-      Router.events.off('routeChangeComplete', handleRouteChange);
-    };
-  }, []);
-
-  // Drive PostHog opt-in/out from Osano consent. Without consent (reject or no
-  // prior decision) capturing stays cookieless/anonymous; on accept it switches
-  // to full cookie-based tracking.
-  useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return;
-
-    const applyConsent = () => {
-      if (hasAnalyticsConsent(window.Osano?.cm?.getConsent?.())) {
-        posthog.opt_in_capturing();
-      } else {
-        posthog.opt_out_capturing();
-      }
-
-      // Both transitions reset PostHog's flag state (opting out additionally
-      // disables persistence, so rejecting users hold no cached flags at all).
-      // Re-request in either direction, otherwise flags stay unresolved for
-      // anyone who declines analytics cookies.
-      posthog.reloadFeatureFlags();
-    };
-
-    const onOsanoReady = () => {
-      applyConsent();
-      window.Osano?.cm?.addEventListener('osano-cm-consent-changed', applyConsent);
-    };
-
-    if (window.Osano?.cm) {
-      onOsanoReady();
-      return;
-    }
-
-    window.addEventListener('osano-cm-initialized', onOsanoReady, { once: true });
-    return () => window.removeEventListener('osano-cm-initialized', onOsanoReady);
-  }, []);
-
-  if (pageProps.markdoc) {
-    return (
-      <MarkdownLayout>
-        <Component {...pageProps} />
-      </MarkdownLayout>
-    );
-  }
-
   const getLayout = Component.getLayout ?? ((page) => <Layout>{page}</Layout>);
 
   return (
-    <>
-      <PostHogProvider client={posthog}>
-        <NuqsAdapter>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-            <QueryClientProvider client={queryClient}>
-              <PostHogFeatureFlagProvider disabled={!process.env.NEXT_PUBLIC_POSTHOG_KEY}>
-                <OnboardingProvider>
-                  <AppProvider>
-                    <TooltipProvider>
-                      <Toaster />
-                      {getLayout(<Component {...pageProps} />)}
-                    </TooltipProvider>
-                  </AppProvider>
-                </OnboardingProvider>
-              </PostHogFeatureFlagProvider>
-            </QueryClientProvider>
-          </ThemeProvider>
-        </NuqsAdapter>
-      </PostHogProvider>
-      <Footer />
-    </>
+    <OsanoProvider>
+      {pageProps.markdoc ? (
+        <MarkdownLayout>
+          <Component {...pageProps} />
+        </MarkdownLayout>
+      ) : (
+        <>
+          <PostHogProvider client={posthog}>
+            <NuqsAdapter>
+              <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+                <QueryClientProvider client={queryClient}>
+                  <PostHogFeatureFlagProvider disabled={!process.env.NEXT_PUBLIC_POSTHOG_KEY}>
+                    <OnboardingProvider>
+                      <AppProvider>
+                        <TooltipProvider>
+                          <Toaster />
+                          {getLayout(<Component {...pageProps} />)}
+                        </TooltipProvider>
+                      </AppProvider>
+                    </OnboardingProvider>
+                  </PostHogFeatureFlagProvider>
+                </QueryClientProvider>
+              </ThemeProvider>
+            </NuqsAdapter>
+          </PostHogProvider>
+
+          <Footer />
+        </>
+      )}
+
+      <PosthogConsentSync />
+      <HubspotTrackingScript />
+    </OsanoProvider>
   );
 }
 

@@ -1423,6 +1423,9 @@ importers:
       tiptap-markdown:
         specifier: ^0.8.8
         version: 0.8.8(@tiptap/core@2.4.0(@tiptap/pm@2.1.13))
+      uid:
+        specifier: ^2.0.2
+        version: 2.0.2
       use-debounce:
         specifier: ^10.0.0
         version: 10.0.0(react@18.3.1)
@@ -17946,7 +17949,7 @@ snapshots:
   '@jridgewell/trace-mapping@0.3.9':
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
-      '@jridgewell/sourcemap-codec': 1.5.5
+      '@jridgewell/sourcemap-codec': 1.6.0
 
   '@keycloak/keycloak-admin-client@26.7.5':
     dependencies:
@@ -22836,7 +22839,7 @@ snapshots:
       obug: 3.0.0
       std-env: 4.3.0
       tinyrainbow: 3.2.0
-      vitest: 5.0.5(@opentelemetry/api@1.9.1)(@types/node@22.17.0)(@vitest/coverage-v8@5.0.5)(jsdom@27.2.0(supports-color@10.2.0))(msw@2.4.9(typescript@6.0.3))(vite@6.4.3(@types/node@22.17.0)(jiti@2.4.2)(terser@5.44.1)(tsx@4.19.4)(yaml@2.8.3))
+      vitest: 5.0.5(@opentelemetry/api@1.9.0)(@types/node@22.17.0)(@vitest/coverage-v8@5.0.5)(jsdom@23.2.0(supports-color@10.2.0))(msw@2.4.9(typescript@6.0.3))(vite@6.4.3(@types/node@22.17.0)(jiti@2.4.2)(terser@5.44.1)(tsx@4.19.4)(yaml@2.8.3))
 
   '@vitest/istanbul-lib-coverage@1.0.2': {}
 
@@ -30604,7 +30607,7 @@ snapshots:
   yargs@17.7.2:
     dependencies:
       cliui: 8.0.1
-      escalade: 3.1.1
+      escalade: 3.2.0
       get-caller-file: 2.0.5
       require-directory: 2.1.1
       string-width: 4.2.3
