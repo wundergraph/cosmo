@@ -63,7 +63,7 @@ type ResponseCacheSettings struct {
 
 type responseCacheSubgraphEntry struct {
 	disabled  bool
-	ttl       time.Duration
+	ttl       *time.Duration
 	privateID *responseCachePrivateID
 }
 
@@ -110,7 +110,10 @@ func NewResponseCacheSettings(cfg *config.ResponseCacheConfiguration, mgr *expr.
 			log.Warn("response_cache.subgraphs names a subgraph this graph does not have", zap.String("subgraph", name))
 		}
 		o := cfg.Subgraphs[name]
-		entry := responseCacheSubgraphEntry{disabled: !o.Enabled, ttl: o.FallbackTTL}
+		entry := responseCacheSubgraphEntry{disabled: !o.Enabled}
+		if o.FallbackTTL > 0 {
+			entry.ttl = new(o.FallbackTTL)
+		}
 		if o.Enabled && o.PrivateID != "" {
 			if entry.privateID, err = compile(o.PrivateID); err != nil {
 				return nil, fmt.Errorf("response_cache.subgraphs.%s: %w", name, err)

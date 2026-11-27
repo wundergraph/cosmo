@@ -67,9 +67,10 @@ func TestResponseCacheSettings(t *testing.T) {
 		first := s.options(headerCtx, failing(t)).Subgraphs
 		second := s.options(headerCtx, failing(t)).Subgraphs
 		require.Equal(t, reflect.ValueOf(first).Pointer(), reflect.ValueOf(second).Pointer(), "the same map every request")
-		require.Equal(t, time.Hour, first["mood"].DefaultTTL)
+		require.Equal(t, new(time.Hour), first["mood"].DefaultTTL)
 		require.False(t, first["mood"].Disabled)
 		require.True(t, first["employees"].Disabled)
+		require.Nil(t, first["employees"].DefaultTTL)
 	})
 
 	t.Run("an entry's private_id is resolved per request and replaces all's", func(t *testing.T) {
