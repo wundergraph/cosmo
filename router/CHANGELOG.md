@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.379.0](https://github.com/wundergraph/cosmo/compare/router@0.378.1...router@0.379.0) (2026-11-27)
+
+### Features
+
+* expose connection id to subgraph access logs ([#3430](https://github.com/wundergraph/cosmo/issues/3430)) ([150cb58](https://github.com/wundergraph/cosmo/commit/150cb58c109709fbf592340f6ef65af81ba14b5b)) (@alepane21)
+
 ## [0.378.1](https://github.com/wundergraph/cosmo/compare/router@0.378.0...router@0.378.1) (2026-11-25)
 
 ### Bug Fixes

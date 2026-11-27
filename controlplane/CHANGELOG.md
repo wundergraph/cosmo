@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.270.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.269.0...controlplane@0.270.0) (2026-11-27)
+
+### Features
+
+* **controlplane:** add request duration histogram ([#3556](https://github.com/wundergraph/cosmo/issues/3556)) ([a368cff](https://github.com/wundergraph/cosmo/commit/a368cfff7b51b1bf2a7fa2b9445a505c75ce742d)) (@gmas)
+
 ## [0.269.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.268.0...controlplane@0.269.0) (2026-11-25)
 
 ### Features
