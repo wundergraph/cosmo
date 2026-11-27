@@ -51,6 +51,7 @@ type PrometheusConfig struct {
 	ResponseCache   bool
 	EngineStats     EngineStatsConfig
 	CircuitBreaker  bool
+	GRPCService     bool
 	CostStats       config.CostStats
 	// Metrics to exclude from Prometheus exporter
 	ExcludeMetrics []*regexp.Regexp
@@ -120,6 +121,7 @@ type OpenTelemetry struct {
 	GraphqlCache    bool
 	ResponseCache   bool
 	CircuitBreaker  bool
+	GRPCService     bool
 	CostStats       config.CostStats
 	EngineStats     EngineStatsConfig
 	Exporters       []*OpenTelemetryExporter

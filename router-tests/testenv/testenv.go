@@ -301,11 +301,13 @@ type MetricOptions struct {
 	EnableOTLPNetworkMetrics              bool
 	EnableOTLPResolverMetrics             bool
 	EnableOTLPCircuitBreakerMetrics       bool
+	EnableOTLPGRPCServiceMetrics          bool
 	EnableOTLPStreamMetrics               bool
 	EnablePrometheusConnectionMetrics     bool
 	EnablePrometheusNetworkMetrics        bool
 	EnablePrometheusResolverMetrics       bool
 	EnablePrometheusCircuitBreakerMetrics bool
+	EnablePrometheusGRPCServiceMetrics    bool
 	EnablePrometheusStreamMetrics         bool
 	EnableOTLPResponseCacheMetrics        bool
 	EnablePrometheusResponseCacheMetrics  bool
@@ -1667,6 +1669,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
 			},
 			CircuitBreaker:       testConfig.MetricOptions.EnablePrometheusCircuitBreakerMetrics,
+			GRPCService:          testConfig.MetricOptions.EnablePrometheusGRPCServiceMetrics,
 			CostStats:            testConfig.MetricOptions.PrometheusCostStats,
 			ExcludeMetrics:       testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels:  testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
@@ -1700,6 +1703,7 @@ func configureRouter(ctx context.Context, listenerAddr string, testConfig *Confi
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},
 					CircuitBreaker:      testConfig.MetricOptions.EnableOTLPCircuitBreakerMetrics,
+					GRPCService:         testConfig.MetricOptions.EnableOTLPGRPCServiceMetrics,
 					CostStats:           testConfig.MetricOptions.OTLPCostStats,
 					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,

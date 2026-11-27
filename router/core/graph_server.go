@@ -1866,6 +1866,16 @@ func (s *graphServer) setupConnector(ctx context.Context, opts setupConnectorOpt
 				grpcTLS = opts.defaultClientTLS
 			}
 
+			// Remote gRPC service metrics are opt-in via metrics.otlp.grpc_service
+			// and metrics.prometheus.grpc_service.
+			var grpcMeterProviders []otelmetric.MeterProvider
+			if s.metricConfig.OpenTelemetry.Enabled && s.metricConfig.OpenTelemetry.GRPCService && s.otlpMeterProvider != nil {
+				grpcMeterProviders = append(grpcMeterProviders, s.otlpMeterProvider)
+			}
+			if s.metricConfig.Prometheus.Enabled && s.metricConfig.Prometheus.GRPCService && s.promMeterProvider != nil {
+				grpcMeterProviders = append(grpcMeterProviders, s.promMeterProvider)
+			}
+
 			// The circuits are shared with the HTTP subgraphs and are looked up by subgraph name on every call
 			var unaryInterceptors []grpc.UnaryClientInterceptor
 			if s.circuitBreakerManager != nil {
@@ -1877,6 +1887,8 @@ func (s *graphServer) setupConnector(ctx context.Context, opts setupConnectorOpt
 				Endpoint:          sg.RoutingUrl,
 				TLSConfig:         grpcTLS,
 				Propagator:        s.compositePropagator,
+				SubgraphName:      sg.Name,
+				MeterProviders:    grpcMeterProviders,
 				UnaryInterceptors: unaryInterceptors,
 			})
 			if err != nil {

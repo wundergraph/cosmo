@@ -9,6 +9,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
 	"github.com/wundergraph/cosmo/router/pkg/trace"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -29,6 +30,15 @@ type RemoteGRPCProviderConfig struct {
 	// into the metadata of outgoing gRPC calls so that remote gRPC subgraph
 	// services can continue the trace. If nil, no trace context is propagated.
 	Propagator propagation.TextMapPropagator
+	// SubgraphName is the name of the subgraph this provider connects to. Used
+	// as a metric attribute and in failure logs.
+	SubgraphName string
+	// MeterProviders record per-request metrics (count, duration, gRPC status
+	// code) for calls to the remote subgraph. Every provider receives the same
+	// measurements. If empty, no metrics are recorded and fetch failures are not
+	// logged. The router adds the OTLP and Prometheus providers when
+	// metrics.otlp.grpc_service and metrics.prometheus.grpc_service are enabled.
+	MeterProviders []metric.MeterProvider
 	// UnaryInterceptors are additional unary client interceptors for outgoing gRPC calls,
 	// e.g. a circuit breaker. They run in the given order, before the trace context is injected.
 	UnaryInterceptors []grpc.UnaryClientInterceptor
@@ -42,6 +52,8 @@ type RemoteGRPCProvider struct {
 	endpoint          string
 	tlsConfig         *tls.Config
 	propagator        propagation.TextMapPropagator
+	subgraphName      string
+	meterProviders    []metric.MeterProvider
 	unaryInterceptors []grpc.UnaryClientInterceptor
 
 	cc grpc.ClientConnInterface
@@ -67,6 +79,8 @@ func NewRemoteGRPCProvider(config RemoteGRPCProviderConfig) (*RemoteGRPCProvider
 		endpoint:          config.Endpoint,
 		tlsConfig:         config.TLSConfig,
 		propagator:        config.Propagator,
+		subgraphName:      config.SubgraphName,
+		meterProviders:    config.MeterProviders,
 		unaryInterceptors: config.UnaryInterceptors,
 	}, nil
 }
@@ -106,6 +120,20 @@ func (g *RemoteGRPCProvider) Start(ctx context.Context) error {
 			opts = append(opts,
 				grpc.WithChainUnaryInterceptor(traceUnaryClientInterceptor(g.propagator)),
 				grpc.WithChainStreamInterceptor(traceStreamClientInterceptor(g.propagator)),
+			)
+		}
+
+		// When a meter provider is configured, record per-request metrics (count,
+		// duration, gRPC status code) and log failed requests, so that transport
+		// failures between the router and the subgraph are observable.
+		if len(g.meterProviders) > 0 {
+			m, err := newGRPCClientMetrics(g.meterProviders, g.subgraphName, g.logger)
+			if err != nil {
+				return fmt.Errorf("failed to create gRPC client metrics: %w", err)
+			}
+			opts = append(opts,
+				grpc.WithChainUnaryInterceptor(metricsUnaryClientInterceptor(m)),
+				grpc.WithChainStreamInterceptor(metricsStreamClientInterceptor(m)),
 			)
 		}
 
