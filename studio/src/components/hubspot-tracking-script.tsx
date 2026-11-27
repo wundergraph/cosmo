@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Script from 'next/script';
 import { Router } from 'next/router';
 import { useOsanoConsentSaved } from '@/hooks/use-osano-consent-saved';
@@ -13,7 +13,8 @@ declare global {
 export function HubspotTrackingScript() {
   const scriptId = process.env.NEXT_PUBLIC_HUBSPOT_SCRIPT_ID;
   const hasConsent = useTrackingConsent();
-  const isLoaded = !!scriptId && hasConsent;
+  const isTrackingAllowed = !!scriptId && hasConsent;
+  const [isTrackerReady, setIsTrackerReady] = useState(false);
 
   // The script can't be unloaded, so toggle HubSpot's do-not-track cookie instead.
   useOsanoConsentSaved((consent) => {
@@ -21,8 +22,9 @@ export function HubspotTrackingScript() {
     window._hsq.push(hasTrackingConsent(consent) ? ['doNotTrack', { track: true }] : ['doNotTrack']);
   });
 
+  // HubSpot records the current path when the script loads, so only navigations after that need a manual page view.
   useEffect(() => {
-    if (!isLoaded) {
+    if (!isTrackingAllowed || !isTrackerReady) {
       return;
     }
 
@@ -36,9 +38,14 @@ export function HubspotTrackingScript() {
     return () => {
       Router.events.off('routeChangeComplete', handleRouteChange);
     };
-  }, [isLoaded]);
+  }, [isTrackingAllowed, isTrackerReady]);
 
-  return isLoaded ? (
-    <Script id="hs-script-loader" strategy="afterInteractive" src={`https://js-eu1.hs-scripts.com/${scriptId}.js`} />
+  return isTrackingAllowed ? (
+    <Script
+      id="hs-script-loader"
+      strategy="afterInteractive"
+      src={`https://js-eu1.hs-scripts.com/${scriptId}.js`}
+      onLoad={() => setIsTrackerReady(true)}
+    />
   ) : null;
 }
