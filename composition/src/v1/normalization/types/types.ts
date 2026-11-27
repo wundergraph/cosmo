@@ -92,6 +92,12 @@ export type HandleSemanticNonNullDirectiveParams = {
   errorMessages: Array<string>;
 };
 
+export type HandlePolicyDirectiveParams = {
+  data: NodeData | SchemaData;
+  errorMessages: Array<string>;
+  parentTypeName: TypeName;
+};
+
 export type HandleCostDirectiveParams = {
   data: NodeData | SchemaData;
   directiveCoords: DirectiveArgumentCoords;
