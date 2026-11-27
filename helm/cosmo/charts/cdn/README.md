@@ -52,4 +52,3 @@ WunderGraph Cosmo CDN
 | tolerations | list | `[]` |  |
 | volumeMounts | list | `[]` |  |
 | volumes | list | `[]` |  |
-

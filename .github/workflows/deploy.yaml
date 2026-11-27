@@ -36,6 +36,9 @@ jobs:
           persist-credentials: false
           # Need the release commit's parent so "Read versions" can diff it.
           fetch-depth: 2
+      - uses: ./.github/actions/mise
+        with:
+          tools: node
       # Unset versions stay empty and the cosmo-cloud receiver skips them.
       - name: Read versions
         id: versions
