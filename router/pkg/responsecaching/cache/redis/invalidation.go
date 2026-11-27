@@ -2,11 +2,13 @@ package redis
 
 import (
 	"context"
+	"crypto/fips140"
 	"errors"
 	"fmt"
 	"iter"
 	"slices"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -208,7 +210,7 @@ func (c *RedisCache) mark(ctx context.Context, tagKey string, members []string) 
 		args[i] = member
 	}
 	args = append([]any{walksMember}, args...)
-	score, err := markMembers.Run(ctx, c.client, []string{tagKey}, args...).Int64()
+	score, err := runMarkMembers(ctx, c.client, []string{tagKey}, args...).Int64()
 	return strconv.FormatInt(score, 10), err
 }
 
@@ -216,7 +218,7 @@ func (c *RedisCache) mark(ctx context.Context, tagKey string, members []string) 
 // the node's time in ms, counts the walk in member ARGV[1], and returns the
 // mark. XX: never re-adds a member removed meanwhile. Walks marking in the
 // same millisecond share a score, so marks are removed by member, not score.
-var markMembers = redis.NewScript(`
+const markMembersSource = `
 local t = redis.call('TIME')
 local mark = -(t[1] * 1000 + math.floor(t[2] / 1000))
 for i = 2, #ARGV do
@@ -226,7 +228,22 @@ if redis.call('EXISTS', KEYS[1]) == 1 then
   redis.call('ZINCRBY', KEYS[1], -1, ARGV[1])
 end
 return mark
-`)
+`
+
+// markMembers is built lazily because redis.NewScript hashes the source with
+// SHA-1 when it is called, which panics in FIPS 140-only mode.
+var markMembers = sync.OnceValue(func() *redis.Script {
+	return redis.NewScript(markMembersSource)
+})
+
+// runMarkMembers runs the mark script. In FIPS mode SHA-1 is unavailable, so
+// the source is sent with EVAL instead of EVALSHA.
+func runMarkMembers(ctx context.Context, client redis.Scripter, keys []string, args ...any) *redis.Cmd {
+	if fips140.Enabled() {
+		return client.Eval(ctx, markMembersSource, keys, args...)
+	}
+	return markMembers().Run(ctx, client, keys, args...)
+}
 
 // mark is a marked member and its score as this walk knows it.
 type mark struct {

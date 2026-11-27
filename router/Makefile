@@ -17,6 +17,7 @@ update-snapshot:
 
 test:
 	gotestsum -f $(FORMAT) -- -race ./...
+	GODEBUG=fips140=only gotestsum -f $(FORMAT) -- -race -run 'TestRedisCache(MarkSends|StartsInFIPS)' ./pkg/responsecaching/cache/redis
 
 test-coverage:
 	gotestsum -f $(FORMAT) -- -race -coverprofile=$(coverage_file) -coverpkg=github.com/wundergraph/cosmo/router/... ./...
