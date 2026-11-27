@@ -824,16 +824,14 @@ describe('@cacheTag tests', () => {
         ],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(
-        subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Query')?.entityCaching
-          ?.cacheTagConfigurations,
-      ).toStrictEqual([
+      const configA = subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Query');
+      assert.isOk(configA?.entityCaching);
+      expect(configA.entityCaching.cacheTagConfigurations).toStrictEqual([
         { fieldName: 'products', format: 'products-{$args.id}', typeName: 'Query' },
       ] satisfies Array<CacheTagConfiguration>);
-      expect(
-        subgraphConfigBySubgraphName.get('b')?.configurationDataByTypeName.get('Query')?.entityCaching
-          ?.cacheTagConfigurations,
-      ).toStrictEqual([
+      const configB = subgraphConfigBySubgraphName.get('b')?.configurationDataByTypeName.get('Query');
+      assert.isOk(configB?.entityCaching);
+      expect(configB.entityCaching.cacheTagConfigurations).toStrictEqual([
         { fieldName: 'products', format: 'catalogue', typeName: 'Query' },
       ] satisfies Array<CacheTagConfiguration>);
     });
@@ -865,16 +863,14 @@ describe('@cacheTag tests', () => {
         ],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(
-        subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Query')?.entityCaching
-          ?.cacheTagConfigurations,
-      ).toStrictEqual([
+      const configA = subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Query');
+      assert.isOk(configA?.entityCaching);
+      expect(configA.entityCaching.cacheTagConfigurations).toStrictEqual([
         { fieldName: 'product', format: 'product-{$args.id}', typeName: 'Query' },
       ] satisfies Array<CacheTagConfiguration>);
-      expect(
-        subgraphConfigBySubgraphName.get('b')?.configurationDataByTypeName.get('Query')?.entityCaching
-          ?.cacheTagConfigurations,
-      ).toStrictEqual([
+      const configB = subgraphConfigBySubgraphName.get('b')?.configurationDataByTypeName.get('Query');
+      assert.isOk(configB?.entityCaching);
+      expect(configB.entityCaching.cacheTagConfigurations).toStrictEqual([
         { fieldName: 'products', format: 'products', typeName: 'Query' },
       ] satisfies Array<CacheTagConfiguration>);
     });
@@ -1686,17 +1682,19 @@ describe('@cacheTag tests', () => {
           ROUTER_COMPATIBILITY_VERSION_ONE,
         );
         expect(warnings).toStrictEqual([]);
-        expect(
-          subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Product')?.entityCaching
-            ?.cacheTagConfigurations,
-        ).toStrictEqual([{ format: 'product-{$key.id}', typeName: 'Product' }] satisfies Array<CacheTagConfiguration>);
-        expect(
-          subgraphConfigBySubgraphName.get('b')?.configurationDataByTypeName.get('Product')?.entityCaching
-            ?.cacheTagConfigurations,
-        ).toStrictEqual([{ format: 'reviews-{$key.id}', typeName: 'Product' }] satisfies Array<CacheTagConfiguration>);
-        expect(
-          subgraphConfigBySubgraphName.get('c')?.configurationDataByTypeName.get('Product')?.entityCaching,
-        ).toBeUndefined();
+        const configA = subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Product');
+        assert.isOk(configA?.entityCaching);
+        expect(configA.entityCaching.cacheTagConfigurations).toStrictEqual([
+          { format: 'product-{$key.id}', typeName: 'Product' },
+        ] satisfies Array<CacheTagConfiguration>);
+        const configB = subgraphConfigBySubgraphName.get('b')?.configurationDataByTypeName.get('Product');
+        assert.isOk(configB?.entityCaching);
+        expect(configB.entityCaching.cacheTagConfigurations).toStrictEqual([
+          { format: 'reviews-{$key.id}', typeName: 'Product' },
+        ] satisfies Array<CacheTagConfiguration>);
+        const configC = subgraphConfigBySubgraphName.get('c')?.configurationDataByTypeName.get('Product');
+        assert.isOk(configC);
+        expect(configC.entityCaching).toBeUndefined();
       });
 
       test('that an overridden entity field leaves the CacheTagConfiguration of the entity intact', () => {
@@ -1725,9 +1723,9 @@ describe('@cacheTag tests', () => {
           ROUTER_COMPATIBILITY_VERSION_ONE,
         );
         const configurationData = subgraphConfigBySubgraphName.get('a')?.configurationDataByTypeName.get('Product');
-        assert.isOk(configurationData);
+        assert.isOk(configurationData?.entityCaching);
         expect(configurationData.fieldNames).toStrictEqual(new Set(['id', 'price']));
-        expect(configurationData.entityCaching?.cacheTagConfigurations).toStrictEqual([
+        expect(configurationData.entityCaching.cacheTagConfigurations).toStrictEqual([
           { format: 'product-{$key.id}', typeName: 'Product' },
         ] satisfies Array<CacheTagConfiguration>);
       });
