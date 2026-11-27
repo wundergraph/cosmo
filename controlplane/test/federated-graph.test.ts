@@ -676,6 +676,57 @@ describe('Federated Graph', (ctx) => {
     },
   );
 
+  test('Should list federated graphs from allowed namespaces and allowed graphs when rules combine both', async () => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
+
+    const label = genUniqueLabel();
+    const prodGraphNames = [genID('prodGraphA'), genID('prodGraphB')].sort();
+    const stagingGraphName = genID('stagingGraph');
+
+    for (const name of ['prod', 'staging']) {
+      const createNamespaceResp = await client.createNamespace({ name });
+      expect(createNamespaceResp.response?.code).toBe(EnumStatusCode.OK);
+    }
+
+    for (const [name, namespace] of [
+      ...prodGraphNames.map((name) => [name, 'prod']),
+      [stagingGraphName, 'staging'],
+      [genID('defaultGraph'), 'default'],
+    ]) {
+      const createFedGraphRes = await client.createFederatedGraph({
+        name,
+        namespace,
+        routingUrl: 'http://localhost:8081',
+        labelMatchers: [joinLabel(label)],
+      });
+      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+    }
+
+    const prodNamespace = await client.getNamespace({ name: 'prod' });
+    expect(prodNamespace.response?.code).toBe(EnumStatusCode.OK);
+
+    const stagingGraph = await client.getFederatedGraphByName({ name: stagingGraphName, namespace: 'staging' });
+    expect(stagingGraph.response?.code).toBe(EnumStatusCode.OK);
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(
+        createTestGroup({ role: 'graph-viewer', namespaces: [prodNamespace.namespace!.id] }),
+        createTestGroup({ role: 'graph-admin', resources: [stagingGraph.graph!.targetId] }),
+      ),
+    });
+
+    const listFedGraphsResp = await client.getFederatedGraphs({
+      supportsFederation: true,
+      offset: 0,
+      limit: 0,
+    });
+
+    expect(listFedGraphsResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(listFedGraphsResp.graphs.map((g) => g.name).sort()).toEqual([...prodGraphNames, stagingGraphName].sort());
+  });
+
   test('Should return an error if the graph name is invalid', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
     testContext.onTestFinished(() => server.close());

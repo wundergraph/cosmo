@@ -8,6 +8,8 @@ Audit logs are crucial for several reasons. First, they provide a detailed recor
 
 Navigate to your organization's page and click on "Audit Log." You will see all audit logs arranged in descending order by their creation date. Each log entry is annotated with information about who performed the action, what was done, and when it occurred. Based on the icon next to the actor, you can determine if the action was performed directly by a user or through their API key. Additionally, several events generated from the Cosmo Platform can be identified accordingly.
 
+Organization admins can send audit logs to a Splunk HTTP Event Collector (HEC) from the "Export audit logs" button on this page. See [Streaming to Splunk HEC](#streaming-to-splunk-hec). Choosing "None" as the destination and saving stops the stream and deletes the stored URL and token.
+
 <Frame caption="Audit Log View">
   <img
     src="/images/studio/wundergraph-dashboard-overview.png"
@@ -15,3 +17,48 @@ Navigate to your organization's page and click on "Audit Log." You will see all 
     title="WunderGraph dashboard overview"
   />
 </Frame>
+
+## Streaming to Splunk HEC
+
+<Note>
+  Audit log streaming is an Enterprise plan feature.
+</Note>
+
+Organization admins can stream audit logs to a Splunk HTTP Event Collector (HEC). New entries are delivered within about a minute of being written. Entries written before the stream was configured are not sent.
+
+Configure the stream with the platform API's `UpsertAuditLogStreamConfig`, `GetAuditLogStreamConfig`, `TestAuditLogStreamConfig` and `DeleteAuditLogStreamConfig` methods, or with the [`wgc audit-log stream`](/cli/audit-log) commands:
+
+```bash
+COSMO_HEC_TOKEN=<token> wgc audit-log stream set splunk-hec --endpoint https://splunk.example.com:8088 --index cosmo
+wgc audit-log stream test
+wgc audit-log stream get
+```
+
+The endpoint can be the collector's base URL or the full `/services/collector/event` URL. It must use HTTPS with a certificate from a trusted CA; Splunk Enterprise's default self-signed HEC certificate is rejected. `localhost` is not accepted. The token is stored by Cosmo and is never returned. `wgc audit-log stream delete` stops the stream and removes the stored URL and token.
+
+Use a token with indexer acknowledgement disabled. Cosmo does not poll for acknowledgements. An event counts as delivered once the collector accepts it.
+
+Each event is sent with sourcetype `wundergraph:cosmo:audit` and source `cosmo` unless overridden. The event body looks like this:
+
+```json
+{
+  "schema_version": 1,
+  "id": "6f1c...",
+  "timestamp": "2026-11-14T09:00:00.000Z",
+  "organization": { "id": "...", "slug": "acme" },
+  "action": "federated_graph.created",
+  "actor": { "type": "user", "id": "...", "name": "jane@acme.com", "api_key_name": null },
+  "object": { "type": "federated_graph", "name": "production" },
+  "target": { "type": null, "id": null, "name": null },
+  "namespace": { "id": "...", "name": "default" }
+}
+```
+
+Splunk indexes the event body itself, so fields are searched without an `event.` prefix:
+
+```
+sourcetype="wundergraph:cosmo:audit" action="federated_graph.*" actor.type="api_key"
+| table _time, organization.slug, actor.name, actor.api_key_name, action, object.name
+```
+
+Delivery is at least once. Use `id` to discard duplicates. Fields are only ever added to this body. If the collector rejects a batch, delivery pauses and retries every 30 seconds from the same point. `GetAuditLogStreamConfig` and `wgc audit-log stream get` return the last error and when the collector last accepted a delivery, including test events.

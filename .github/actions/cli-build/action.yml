@@ -18,18 +18,12 @@ runs:
   using: 'composite'
   steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
+    - name: Setup Node and Bun
+      uses: ./.github/actions/node
       with:
-        bun-version: '1.2.19'
-
-    - name: Setup Node
-      uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2
-      with:
-        cache: true
-        install: false
+        tools: bun
 
     - name: Generate outfile name
       id: outfile
@@ -63,7 +57,7 @@ runs:
 
     - name: 'Upload builds as artifacts'
       id: upload
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: '${{ steps.outfile.outputs.name }}'
         path: 'cli/out/${{ steps.outfile.outputs.name }}'

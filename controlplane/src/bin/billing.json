@@ -201,7 +201,8 @@
         {
           "id": "login-method-restrictions",
           "description": "Restrict login methods per organization and namespace"
-        }
+        },
+        { "id": "audit-log-streaming", "description": "Audit Log Streaming" }
       ]
     }
   }

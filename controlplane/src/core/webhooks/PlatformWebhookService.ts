@@ -17,6 +17,9 @@ interface User {
   utm_campaign?: string;
   utm_content?: string;
   utm_term?: string;
+  company_name?: string;
+  use_case?: string;
+  current_setup?: string;
 }
 
 interface ApolloMigrate {

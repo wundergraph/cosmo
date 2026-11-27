@@ -1,5 +1,4 @@
 node_modules
-/.bin/
 .husky/_
 .idea
 .vscode
@@ -30,3 +29,6 @@ go.work.sum
 
 # Claude Code
 .claude/worktrees/
+
+# Go module cache used by the release workflows
+/.gomodcache/

@@ -118,7 +118,9 @@ async function getKeycloakUsers(): Promise<UserRepresentation[]> {
       ...chunkOfUsers.filter((user) => {
         const createdAt = new Date(user.createdTimestamp);
         const needsToAcceptTermsAndConditions =
-          user.requiredActions?.some((action) => action === RequiredAction.TERMS_AND_CONDITIONS) ?? false;
+          user.requiredActions?.some(
+            (action) => action === RequiredAction.TERMS_AND_CONDITIONS || action === RequiredAction.COMPLETE_ACCOUNT,
+          ) ?? false;
 
         return createdAt < CREATED_NOT_AFTER && user.emailVerified !== true && needsToAcceptTermsAndConditions;
       }),
@@ -188,6 +190,8 @@ interface UserQuery {
 
 enum RequiredAction {
   TERMS_AND_CONDITIONS = 'TERMS_AND_CONDITIONS',
+  // Replaces TERMS_AND_CONDITIONS and also records the terms acceptance
+  COMPLETE_ACCOUNT = 'COMPLETE_ACCOUNT',
 }
 
 interface UserRepresentation {

@@ -3,6 +3,7 @@ package in_memory
 import (
 	"context"
 	"math"
+	"slices"
 	"testing"
 	"time"
 
@@ -129,21 +130,22 @@ func TestInMemoryCache(t *testing.T) {
 
 			c := newTestCache(t)
 
-			surrogateKeys := []string{"subgraph-accounts", "user-42"}
+			want := []enginecache.SurrogateKey{enginecache.SubgraphSurrogateKey("accounts"), enginecache.DeclaredSurrogateKey("user-42")}
+			surrogateKeys := slices.Clone(want)
 			err := c.SetMany(ctx, []enginecache.Item{
 				{Key: "a", Value: []byte("value"), TTL: time.Hour, SurrogateKeys: surrogateKeys},
 			})
 			require.NoError(t, err)
-			surrogateKeys[0] = "changed-after-write"
+			surrogateKeys[0] = enginecache.DeclaredSurrogateKey("changed-after-write")
 
 			results, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
-			require.Equal(t, []string{"subgraph-accounts", "user-42"}, results["a"].SurrogateKeys)
+			require.Equal(t, want, results["a"].SurrogateKeys)
 
-			results["a"].SurrogateKeys[0] = "changed-after-read"
+			results["a"].SurrogateKeys[0] = enginecache.DeclaredSurrogateKey("changed-after-read")
 			again, err := c.GetMany(ctx, []string{"a"})
 			require.NoError(t, err)
-			require.Equal(t, []string{"subgraph-accounts", "user-42"}, again["a"].SurrogateKeys)
+			require.Equal(t, want, again["a"].SurrogateKeys)
 		})
 
 		t.Run("a vary record comes back as a record and is not shared", func(t *testing.T) {
@@ -822,4 +824,23 @@ func TestInMemoryCache(t *testing.T) {
 			require.Contains(t, results, "a")
 		})
 	})
+}
+
+func TestInMemoryCacheKeepsClientDirectives(t *testing.T) {
+	t.Parallel()
+
+	c, err := NewInMemoryCache(100)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = c.Close() })
+
+	item := enginecache.Item{Key: "k", Value: []byte(`{}`), TTL: time.Minute, Public: true, SharedOnly: true, ClientTTL: 55 * time.Second}
+	require.NoError(t, c.SetMany(t.Context(), []enginecache.Item{item}))
+
+	got, err := c.GetMany(t.Context(), []string{"k"})
+	require.NoError(t, err)
+	require.True(t, got["k"].Public)
+	require.True(t, got["k"].SharedOnly)
+	// ClientTTL counts down with TTL.
+	require.Positive(t, got["k"].ClientTTL)
+	require.Equal(t, 5*time.Second, got["k"].TTL-got["k"].ClientTTL)
 }

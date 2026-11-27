@@ -20,6 +20,7 @@
           "Endpoint": "https://my-otel-collector.example.com",
           "HTTPPath": "/v1/traces",
           "Headers": {},
+          "SamplingRate": 0.5,
           "BatchTimeout": 10000000000,
           "ExportTimeout": 30000000000
         }
@@ -194,6 +195,9 @@
       "Content-Length",
       "Content-Type"
     ],
+    "ExposeHeaders": [
+      "x-trace-id"
+    ],
     "AllowCredentials": true,
     "MaxAge": 300000000000
   },
@@ -249,11 +253,14 @@
           "Enabled": true
         }
       }
-    }
+    },
+    "Watch": true,
+    "WatchInterval": 5000000000
   },
   "CacheControl": {
     "Enabled": true,
     "Value": "max-age=180, public",
+    "MissingNoStore": true,
     "Subgraphs": [
       {
         "Name": "products",
@@ -274,7 +281,9 @@
       }
     },
     "Storage": {
-      "ProviderID": "mcp"
+      "ProviderID": "mcp",
+      "ObjectPath": "mcp/manifest.json",
+      "PollInterval": 30000000000
     },
     "Session": {
       "Stateless": true
@@ -424,8 +433,22 @@
           "ValueFrom": null,
           "FromFile": {
             "Path": "/etc/secrets/api-key",
-            "RefreshInterval": 60000000000
+            "RefreshInterval": 60000000000,
+            "Prefix": "Bearer "
           }
+        },
+        {
+          "Operation": "remove",
+          "Matching": "(?i)^X-Custom-Internal-.*",
+          "NegateMatch": false,
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "",
+          "Value": "",
+          "Expression": "",
+          "ValueFrom": null,
+          "FromFile": null
         }
       ],
       "Response": [
@@ -452,6 +475,19 @@
             "Named": "Subgraph-Secret",
             "Rename": "",
             "Default": "some-secret",
+            "Name": "",
+            "Value": "",
+            "Expression": "",
+            "ValueFrom": null,
+            "FromFile": null
+          },
+          {
+            "Operation": "remove",
+            "Matching": "",
+            "NegateMatch": false,
+            "Named": "X-API-Key",
+            "Rename": "",
+            "Default": "",
             "Name": "",
             "Value": "",
             "Expression": "",
@@ -528,7 +564,11 @@
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 4194304,
       "DecompressionEnabled": false,
-      "ResponseCompressionMinSize": 4096
+      "ResponseCompressionMinSize": 4096,
+      "RequestReadTimeout": 30000000000,
+      "RequestHeaderReadTimeout": 5000000000,
+      "IdleTimeout": 90000000000,
+      "WriteTimeout": 120000000000
     },
     "Subgraphs": {
       "products": {
@@ -687,7 +727,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         },
         {
           "URL": "https://example.com/.well-known/jwks2.json",
@@ -706,7 +747,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         },
         {
           "URL": "https://example.com/.well-known/jwks3.json",
@@ -722,7 +764,8 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null
+          "Audiences": null,
+          "Issuers": null
         }
       ],
       "ScopeClaim": "customscp",
@@ -898,7 +941,11 @@
       "Enabled": true,
       "Name": "Surrogate-Key",
       "Delimiter": " ",
-      "MaxBytes": 1024
+      "Tiers": [
+        "cache_tag"
+      ],
+      "MaxBytes": 1024,
+      "OnOverflow": "private"
     },
     "All": {
       "Enabled": true,
@@ -993,6 +1040,9 @@
       "ApproximateDepthLimit": 200,
       "TotalFieldsLimit": 3500
     },
+    "NormalizationLimits": {
+      "MaxSelections": 20000
+    },
     "OperationNameLengthLimit": 2000
   },
   "EngineExecutionConfiguration": {
@@ -1024,7 +1074,7 @@
     "ForceUnauthenticatedRequestTracing": false,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 32,
-    "EnableNetPoll": true,
+    "EnableNetPoll": false,
     "ExecutionPlanCacheSize": 1024,
     "SlowPlanCacheSize": 300,
     "SlowPlanCacheThreshold": 100000000,
@@ -1271,11 +1321,25 @@
     },
     "SkipNullVariablesError": {
       "Enabled": false
+    },
+    "CacheControlAnyPublic": {
+      "Enabled": true
     }
+  },
+  "GraphQLOverHTTP": {
+    "StatusCodes": "September2026"
   },
   "ClientHeader": {
     "Name": "Client-Name",
     "Version": "Client_Version"
+  },
+  "BackwardsCompatibility": {
+    "PersistedOperations": {
+      "AllowMismatchedSHA256IDs": false
+    },
+    "VariablesValidation": {
+      "AllowInt64Values": false
+    }
   },
   "Plugins": {
     "Enabled": true,

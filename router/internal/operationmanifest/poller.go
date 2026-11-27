@@ -1,0 +1,94 @@
+package operationmanifest
+
+import (
+	"context"
+	"math/rand"
+	"time"
+
+	"go.uber.org/zap"
+)
+
+// Loader fetches the manifest for the Poller.
+// Fetch returns a candidate and changed=true when content is fetched, or
+// changed=false for a no-change response (e.g. HTTP 304). The Poller compares
+// candidate revisions before publishing updates.
+type Loader interface {
+	Fetch(ctx context.Context, currentRevision string) (*Manifest, bool, error)
+}
+
+type Poller struct {
+	loader       Loader
+	pollInterval time.Duration
+	pollJitter   time.Duration
+	logger       *zap.Logger
+	store        *Store
+}
+
+// NewPoller creates a poller that fetches every pollInterval plus a random
+// jitter of up to pollJitter. A non-positive pollJitter disables the jitter.
+func NewPoller(loader Loader, store *Store, pollInterval, pollJitter time.Duration, logger *zap.Logger) *Poller {
+	if pollInterval <= 0 {
+		pollInterval = 10 * time.Second
+	}
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	return &Poller{
+		loader:       loader,
+		store:        store,
+		pollInterval: pollInterval,
+		pollJitter:   max(0, pollJitter),
+		logger:       logger,
+	}
+}
+
+// FetchInitial performs a blocking initial fetch, called at startup.
+func (p *Poller) FetchInitial(ctx context.Context) error {
+	manifest, changed, err := p.loader.Fetch(ctx, "")
+	if err != nil {
+		return err
+	}
+
+	if changed && manifest != nil {
+		p.store.Load(manifest)
+	}
+
+	return nil
+}
+
+// Poll runs a background goroutine loop that periodically fetches the manifest.
+// It sleeps for pollInterval + random jitter, fetches, and updates the store
+// only when a changed, nonnil candidate has a different revision.
+// It exits when ctx is cancelled.
+func (p *Poller) Poll(ctx context.Context) {
+	for {
+		jitter := time.Duration(rand.Int63n(int64(p.pollJitter) + 1))
+		sleepDuration := p.pollInterval + jitter
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(sleepDuration):
+		}
+
+		currentRevision := p.store.Revision()
+		manifest, changed, err := p.loader.Fetch(ctx, currentRevision)
+		if err != nil {
+			p.logger.Warn("Failed to fetch manifest", zap.Error(err))
+			continue
+		}
+
+		if changed && manifest != nil && manifest.Revision != currentRevision {
+			p.store.Load(manifest)
+			p.logger.Debug("Updated manifest",
+				zap.String("revision", manifest.Revision),
+				zap.String("previous_revision", currentRevision),
+				zap.Int("operation_count", len(manifest.Operations)),
+			)
+		} else {
+			p.logger.Debug("Manifest unchanged, skipping update",
+				zap.String("previous_revision", currentRevision),
+			)
+		}
+	}
+}

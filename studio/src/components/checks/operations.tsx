@@ -14,14 +14,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
+import { ClearableInput } from '@/components/ui/clearable-input';
 import { Loader } from '@/components/ui/loader';
 import { useToast } from '@/components/ui/use-toast';
 import { formatDateTime } from '@/lib/format-date';
 import { cn } from '@/lib/utils';
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { CheckCircleIcon, ExclamationTriangleIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
-import { ChevronDownIcon, Cross1Icon, InfoCircledIcon, MagnifyingGlassIcon, Share1Icon } from '@radix-ui/react-icons';
+import { ChevronDownIcon, InfoCircledIcon, MagnifyingGlassIcon, Share1Icon } from '@radix-ui/react-icons';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   createIgnoreOverridesForAllOperations,
@@ -137,6 +137,9 @@ export const CheckOperations = () => {
       enabled: !!graphContext?.graph?.name,
     },
   );
+
+  const canApproveChecks = data?.canApproveChecks ?? false;
+  const canIgnoreOperations = data?.canIgnoreOperations ?? false;
 
   const { mutate: createOverrides, isPending: creatingOverrides } = useMutation(createOperationOverrides, {
     onSuccess: (d) => {
@@ -313,34 +316,25 @@ export const CheckOperations = () => {
   return (
     <div className=" flex h-full flex-col px-4 lg:px-6">
       <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
-          <Input
-            placeholder="Search by hash or name"
-            className="pl-8 pr-10"
-            value={search}
-            onChange={(e) => setSearch({ search: e.target.value, page: null })}
-          />
-          {search && (
-            <Button
-              variant="ghost"
-              className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-              onClick={() => setSearch({ search: null, page: null })}
-            >
-              <Cross1Icon />
-            </Button>
-          )}
-        </div>
+        <ClearableInput
+          icon={<MagnifyingGlassIcon />}
+          containerClassName="flex-1"
+          placeholder="Search by hash or name"
+          clearLabel="Clear search"
+          value={search}
+          onChange={(e) => setSearch({ search: e.target.value, page: null })}
+          onClear={search ? () => setSearch({ search: null, page: null }) : undefined}
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="secondary">
+            <Button variant="secondary" disabled={!canApproveChecks && !canIgnoreOperations}>
               Overrides
               <ChevronDownIcon className="ml-2" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              disabled={togglingGlobalChangeOverrides}
+              disabled={!canApproveChecks || togglingGlobalChangeOverrides}
               onClick={() => {
                 toggleGlobalChangeOverrides({
                   checkId: id,
@@ -361,7 +355,7 @@ export const CheckOperations = () => {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              disabled={creatingGlobalIgnoreOverrides || doAllOperationsHaveIgnoreAllOverride}
+              disabled={!canIgnoreOperations || creatingGlobalIgnoreOverrides || doAllOperationsHaveIgnoreAllOverride}
               onClick={() => {
                 createGlobalIgnoreOverrides({
                   checkId: id,
@@ -452,20 +446,25 @@ export const CheckOperations = () => {
                           {!hasIgnoreAllOverride && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button size="sm" variant="secondary">
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  disabled={!canApproveChecks && !canIgnoreOperations}
+                                >
                                   Overrides
                                   <ChevronDownIcon className="ml-2" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
-                                  disabled={removingOverrides || creatingOverrides}
+                                  disabled={!canApproveChecks || removingOverrides || creatingOverrides}
                                   onClick={() => {
                                     doAllChangesHaveOverrides
                                       ? removeOverrides({
                                           graphName: graphContext?.graph?.name,
                                           namespace: graphContext?.graph?.namespace,
                                           operationHash: hash,
+                                          checkId: id,
                                           changes: impactingChanges.map((c) =>
                                             create(OverrideChangeSchema, { changeType: c.changeType, path: c.path }),
                                           ),
@@ -475,6 +474,7 @@ export const CheckOperations = () => {
                                           namespace: graphContext?.graph?.namespace,
                                           operationHash: hash,
                                           operationName: name,
+                                          checkId: id,
                                           changes: impactingChanges.map((c) =>
                                             create(OverrideChangeSchema, { changeType: c.changeType, path: c.path }),
                                           ),
@@ -491,7 +491,7 @@ export const CheckOperations = () => {
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                  disabled={ignoring}
+                                  disabled={!canIgnoreOperations || ignoring}
                                   onClick={() => {
                                     createIgnoreAll({
                                       operationHash: hash,
@@ -523,6 +523,7 @@ export const CheckOperations = () => {
                             size="sm"
                             variant="secondary"
                             className="mt-4"
+                            disabled={!canIgnoreOperations}
                             isLoading={removing}
                             onClick={() =>
                               removeIgnoreAll({
@@ -549,6 +550,7 @@ export const CheckOperations = () => {
                         }
                         trafficCheckDays={data.trafficCheckDays}
                         createdAt={data.createdAt}
+                        canApproveChecks={canApproveChecks}
                       />
                     </div>
                   </AccordionContent>

@@ -60,6 +60,7 @@ import {
   createDeactivateOrganizationWorker,
   DeactivateOrganizationQueue,
 } from './workers/DeactivateOrganizationWorker.js';
+import { AuditLogStreamQueue, createAuditLogStreamWorker } from './workers/AuditLogStreamWorker.js';
 import { createDeleteUserWorker, DeleteUserQueue } from './workers/DeleteUserQueue.js';
 import {
   createReactivateOrganizationWorker,
@@ -88,6 +89,7 @@ export interface BuildConfig {
   };
   prometheus?: MetricsOptions;
   openaiAPIKey?: string;
+  apolloAPIURL?: string;
   allowedOrigins?: string[];
   debugSQL?: boolean;
   production?: boolean;
@@ -443,6 +445,17 @@ export default async function build(opts: BuildConfig) {
     }),
   );
 
+  const auditLogStreamQueue = new AuditLogStreamQueue(logger, fastify.redisForQueue);
+  await auditLogStreamQueue.schedule();
+  bullWorkers.push(
+    createAuditLogStreamWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      defaultBillingPlanId: opts.stripe?.defaultPlanId,
+    }),
+  );
+
   const deleteOrganizationQueue = new DeleteOrganizationQueue(logger, fastify.redisForQueue);
   bullWorkers.push(
     createDeleteOrganizationWorker({
@@ -653,6 +666,7 @@ export default async function build(opts: BuildConfig) {
       mailerClient,
       billingDefaultPlanId: opts.stripe?.defaultPlanId,
       openaiApiKey: opts.openaiAPIKey,
+      apolloApiUrl: opts.apolloAPIURL,
       queues: {
         readmeQueue,
         deleteOrganizationQueue,

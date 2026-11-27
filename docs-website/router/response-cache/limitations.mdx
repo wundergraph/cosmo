@@ -1,0 +1,119 @@
+---
+title: "Considerations and Limitations"
+sidebarTitle: "Considerations and limitations"
+description: "What to plan for before relying on the response cache, and what it does not do."
+icon: "triangle-exclamation"
+---
+
+## Before you deploy
+
+### Redis is in the request path
+
+- **Startup depends on Redis.** The router does not start while Redis is unreachable. See [Redis](/router/response-cache/configuration#redis).
+- **Writes are synchronous.** The client response waits for each cache write. Keep Redis close to the router, and watch the write duration under [Cache health](/router/response-cache/observability#cache-health).
+- **There is no cache-specific timeout.** Without limits on the Redis URL, an unresponsive Redis holds every cacheable fetch for seconds. See [Redis timeouts](/router/response-cache/configuration#redis-timeouts).
+- **Failures fall back to the subgraph.** While Redis is down, every fetch goes to its subgraph. Your subgraphs must be able to take the full traffic.
+
+### Size Redis for the cache
+
+- Set `maxmemory` and an eviction policy such as `volatile-ttl` or `allkeys-lru`. Every entry has an expiry.
+- Every object of an entity fetch is its own key. An entity fetch for 100 distinct objects adds 100 keys. See [Keys](/router/response-cache/how-it-works#keys).
+- Every [index](/router/response-cache/invalidation#indexes) tag is a sorted set. With all indexes on, an entity entry is listed in at least two sets: its subgraph and its type.
+
+### Key cardinality
+
+A key includes every variable value of the subgraph request. Operations with many distinct variable values, such as search terms or pagination cursors, create entries that are rarely read again. They cost a write on each miss and a lookup on each request.
+
+Use the [store decision](/router/response-cache/observability#store-decision) and the churn query to find such operations. Send `no-store` from the subgraph for responses that are not worth caching.
+
+### In-memory provider
+
+An in-memory storage provider exists, set with [`storage.provider: 'memory'`](/router/configuration#response-cache). It is not suitable for production. Each router replica has its own cache, nothing survives a restart, and an invalidation reaches only the replica it was sent to. Use Redis.
+
+### Secure the invalidation endpoint
+
+Anyone with the shared key can empty the cache and push the full load onto your subgraphs. Rotate the key like any other credential. See [Invalidation endpoint](/router/response-cache/invalidation#invalidation-endpoint).
+
+## Subgraph responsibilities
+
+The cache trusts what subgraphs say about their responses.
+
+- **Send a caching directive on every cacheable response.** See [What is stored](/router/response-cache/how-it-works#what-is-stored).
+- **Name request headers in `Vary`.** A forwarded header that changes the answer must be listed in `Vary`. Otherwise the first caller's answer is served to everyone. See [Varying responses](/router/response-cache/how-it-works#varying-responses).
+- **Mark per-caller data `private`, and configure a `private_id`.** See [Private responses](/router/response-cache/configuration#private-responses).
+- **Mark responses that depend on other credentials `private`.** See [Only `Authorization` makes a response private](#only-authorization-makes-a-response-private).
+- **Report failures as failures.** A `200` with wrong data is stored. See [Subgraph data is not validated](#subgraph-data-is-not-validated-before-storing).
+
+## Limitations
+
+### Subgraph data is not validated before storing
+
+Data is stored as the subgraph returned it, before it is checked against the schema. A value of the wrong type, or `null` in a non-null field, is stored. Every hit then returns the same error until the entry expires or is invalidated. This is a known issue.
+
+### Entities that do not exist are not cached
+
+An object the subgraph returns as `null` is not stored. A fetch that includes it is never a hit, so it reaches the subgraph on every request.
+
+### Batches are all or nothing
+
+One missing object sends the whole entity fetch to the subgraph, including the cached objects. After an invalidation of one object, the next request for any batch containing it refetches the whole batch. See [All or nothing per fetch](/router/response-cache/how-it-works#all-or-nothing-per-fetch).
+
+### Merged entity fetches
+
+With `engine.enable_multi_fetch`, which is on by default, entity fetches can be [merged](/router/response-cache/how-it-works#keys-in-merged-entity-fetches) into one request.
+
+- **Entries are not shared with plain entity fetches.** How fetches are merged depends on the shape of the operation, so two operations that need the same objects can use different entries.
+- **Declared cache tags are dropped.** Such entries can be invalidated by subgraph or type, but not by cache tag.
+- **One `Vary` covers all aliases.** The merged response's `Vary` applies to every alias.
+- **Dependent fetches are skipped on failure.** When the request for the uncached aliases fails, fetches that depend on the merged fetch are skipped, including those that need only cached aliases. Their fields are `null` without an error.
+
+### Only `Authorization` makes a response private
+
+A subgraph request that carries a forwarded `Authorization` header makes the subgraph response private, unless it says `public`, `s-maxage` or `must-revalidate`. No other credential has this effect. A subgraph that authenticates with `Cookie` or a custom header, and sends `max-age` without `private`, has its answer stored as a shared entry and served to every caller. Such subgraphs must send `private`. See [Authorization](/router/response-cache/how-it-works#authorization).
+
+### Varied headers changed by custom modules
+
+For a subgraph response with `Vary`, the router keys the entry by the header values it built, before custom modules run.
+
+- If a module changes a varied header, the subgraph response is not stored.
+- `Accept`, `Accept-Encoding` and `Content-Type` are not checked. If a module changes one of them based on other input, such as a client header the subgraph does not vary on, different requests can share an entry and get each other's answers.
+
+See [Varying responses](/router/response-cache/how-it-works#varying-responses).
+
+### No stale serving or revalidation
+
+Entries are served until they expire and never after. The cache never revalidates with the subgraph. See [Lifetime](/router/response-cache/how-it-works#lifetime).
+
+### Clients can bypass the cache
+
+Any client can send `Cache-Control: no-cache` to skip the cache, and these directives cannot be turned off. See [Request directives](/router/response-cache/how-it-works#request-directives).
+
+### Operations that are never cached
+
+Mutations, subscriptions, WebSocket operations, file uploads and introspection are never cached. See [Which fetches are cached](/router/response-cache/how-it-works#which-fetches-are-cached).
+
+### gRPC subgraphs and plugins are not supported
+
+The response cache does not support gRPC subgraphs or router plugins. Nothing they return is stored.
+
+- **Root fetches** are not looked up. They report `not_cacheable`.
+- **Entity fetches** are still looked up in the store on every request, which costs a round trip each. Their responses carry no `Cache-Control` or `Expires`, so they are never stored. They report `miss` with store decision `no_directive`.
+
+Turn the cache off for these subgraphs to skip the lookups:
+
+```yaml config.yaml
+response_cache:
+  subgraphs:
+    my-grpc-subgraph:
+      enabled: false
+```
+
+### Cache-Control on the client response
+
+- Without a cache control policy, the client response gets no `Cache-Control` from the cache. See [Cache-Control of cached fetches](/router/response-cache/how-it-works#cache-control-of-cached-fetches).
+- `must-revalidate` and `proxy-revalidate` are reported on a miss but not on a hit. `stale-while-revalidate` and `stale-if-error` are never reported.
+- Batched operations receive no `Cache-Control` from the cache.
+
+### Response headers on hits
+
+A hit has no subgraph response. Forwarded subgraph response headers, such as `Set-Cookie`, are absent, and `subgraph.response.header` is empty. Transport telemetry is missing too. See [Per fetch](/router/response-cache/observability#per-fetch).

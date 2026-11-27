@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
 	"maps"
@@ -39,12 +38,12 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
+	"github.com/wundergraph/cosmo/router/internal/operationmanifest"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/fs"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
@@ -163,6 +162,16 @@ type (
 		// It's used for the routers http server.
 		// It's created once during bootstrap and reused during server swap.
 		compiledServerConfig *tls.Config
+
+		// certs holds every certificate loaded from the settings so they can be reloaded from disk.
+		certs certReloaders
+
+		// Watched client TLS configs are shared across graph servers.
+		// Without watching, each graph server reloads its own TLS files.
+		defaultClientTLS     *tls.Config
+		perSubgraphTLS       map[string]*tls.Config
+		defaultGRPCClientTLS *tls.Config
+		perSubgraphGRPCTLS   map[string]*tls.Config
 	}
 
 	RouterConfigPollerConfig struct {
@@ -249,6 +258,10 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 
 	if r.playgroundConfig.Path == "" {
 		r.playgroundConfig.Path = "/"
+	}
+
+	if r.backwardsCompatibility.VariablesValidation.AllowInt64Values {
+		r.logger.Warn("allow_int64_values is enabled: variables of type Int accept values outside the signed 32-bit range required by the GraphQL specification")
 	}
 
 	// handle introspection config deprecation
@@ -350,6 +363,13 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Covers headers and cache_control_policy rules alike.
+	if r.headerPropagation != nil {
+		if r.apolloRouterCompatibilityFlags.CacheControlAnyPublic.Enabled {
+			r.headerPropagation.publicMode = publicRequiresAny
+		}
+		r.headerPropagation.missingNoStore = r.cacheControlPolicy.MissingNoStore
+	}
 
 	defaultCorsHeaders := []string{
 		// Common headers
@@ -388,6 +408,7 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 	}
 	r.corsOptions.AllowHeaders = stringsx.RemoveDuplicates(append(r.corsOptions.AllowHeaders, defaultCorsHeaders...))
 	r.corsOptions.AllowMethods = stringsx.RemoveDuplicates(append(r.corsOptions.AllowMethods, defaultMethods...))
+	r.corsOptions.ExposeHeaders = stringsx.RemoveDuplicates(r.corsOptions.ExposeHeaders)
 
 	if r.tls.settings.Server.Enabled {
 		r.baseURL = fmt.Sprintf("https://%s", r.listenAddr)
@@ -397,6 +418,18 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 		}
 	} else {
 		r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
+	}
+
+	if r.tls.settings.Watch {
+		r.tls.defaultClientTLS, r.tls.perSubgraphTLS, err = buildSubgraphHTTPTLSConfigs(&r.tls.certs, r.logger, &r.tls.settings.Client)
+		if err != nil {
+			return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
+		}
+
+		r.tls.defaultGRPCClientTLS, r.tls.perSubgraphGRPCTLS, err = buildSubgraphGRPCTLSConfigs(&r.tls.certs, r.logger, &r.tls.settings.ClientGRPC)
+		if err != nil {
+			return nil, fmt.Errorf("could not build gRPC subgraph client TLS config: %w", err)
+		}
 	}
 
 	graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
@@ -561,23 +594,24 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 		r.logger.Info("Kafka Event source enabled", zap.String("provider_id", source.ID), zap.Strings("brokers", source.Brokers))
 	}
 
-	if !r.engineExecutionConfiguration.EnableNetPoll {
-		r.logger.Warn("Net poller is disabled by configuration. Falling back to less efficient connection handling method.")
-	} else if err := netpoll.Supported(); err != nil {
+	if r.engineExecutionConfiguration.EnableNetPoll {
+		if err := netpoll.Supported(); err != nil {
+			// Disable netPoll if it's not supported. This flag is used everywhere to decide whether to use netPoll or not.
+			r.engineExecutionConfiguration.EnableNetPoll = false
 
-		// Disable netPoll if it's not supported. This flag is used everywhere to decide whether to use netPoll or not.
-		r.engineExecutionConfiguration.EnableNetPoll = false
-
-		if errors.Is(err, netpoll.ErrUnsupported) {
-			r.logger.Warn(
-				"Net poller is only available on Linux and MacOS. Falling back to less efficient connection handling method.",
-				zap.Error(err),
-			)
+			if errors.Is(err, netpoll.ErrUnsupported) {
+				r.logger.Warn(
+					"Net poller is only available on Linux and macOS. Falling back to goroutine-based WebSocket connection handling.",
+					zap.Error(err),
+				)
+			} else {
+				r.logger.Warn(
+					"Net poller is not functional in this environment. Ensure that the system supports epoll/kqueue and that necessary syscall permissions are granted. Falling back to goroutine-based WebSocket connection handling.",
+					zap.Error(err),
+				)
+			}
 		} else {
-			r.logger.Warn(
-				"Net poller is not functional by the environment. Ensure that the system supports epoll/kqueue and that necessary syscall permissions are granted. Falling back to less efficient connection handling method.",
-				zap.Error(err),
-			)
+			r.logger.Warn("Manual WebSocket netpoll is enabled and can introduce head-of-line blocking across connections. Use with care.")
 		}
 	}
 
@@ -595,6 +629,8 @@ func NewRouter(ctx context.Context, opts ...Option) (*Router, error) {
 // It's meant to be used as the routers http server tls configuration.
 // If TLS is not configured it returns nil.
 // If settings are invalid or a config can't be created it returns an error.
+// The certificate is served through a callback so a reload applies to new
+// connections without restarting the listener. The client CA is loaded once.
 func (r *Router) serverTLSConfig() (*tls.Config, error) {
 	serverTLS := r.tls.settings.Server
 
@@ -610,42 +646,40 @@ func (r *Router) serverTLSConfig() (*tls.Config, error) {
 		return nil, errors.New("tls key file not provided")
 	}
 
-	var caCertPool *x509.CertPool
-	clientAuthMode := tls.NoClientCert
+	certs, err := r.tls.certs.add(serverTLS.CertFile, serverTLS.KeyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := &tls.Config{
+		GetCertificate: certs.getCertificate,
+	}
 
 	if serverTLS.ClientAuth.CertFile != "" {
-		caCert, err := os.ReadFile(serverTLS.ClientAuth.CertFile)
+		cfg.ClientCAs, err = loadCertPool(serverTLS.ClientAuth.CertFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read cert file: %w", err)
+			return nil, fmt.Errorf("failed to load tls.server.client_auth.cert_file: %w", err)
 		}
-
-		// Create a CA an empty cert pool and add the CA cert to it to serve as authority to validate client certs
-		caPool := x509.NewCertPool()
-		if ok := caPool.AppendCertsFromPEM(caCert); !ok {
-			return nil, errors.New("failed to append cert to pool")
-		}
-		caCertPool = caPool
 
 		if serverTLS.ClientAuth.Required {
-			clientAuthMode = tls.RequireAndVerifyClientCert
+			cfg.ClientAuth = tls.RequireAndVerifyClientCert
 		} else {
-			clientAuthMode = tls.VerifyClientCertIfGiven
+			cfg.ClientAuth = tls.VerifyClientCertIfGiven
 		}
 
-		r.logger.Debug("Client auth enabled", zap.String("mode", clientAuthMode.String()))
+		r.logger.Debug("Client auth enabled", zap.String("mode", cfg.ClientAuth.String()))
 	}
 
-	// Load the server cert and private key
-	cer, err := tls.LoadX509KeyPair(serverTLS.CertFile, serverTLS.KeyFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load tls cert and key: %w", err)
+	return cfg, nil
+}
+
+// watchTLSCertificates reloads certificates from disk when tls.watch is enabled.
+func (r *Router) watchTLSCertificates(ctx context.Context) error {
+	if !r.tls.settings.Watch {
+		return nil
 	}
 
-	return &tls.Config{
-		ClientCAs:    caCertPool,
-		Certificates: []tls.Certificate{cer},
-		ClientAuth:   clientAuthMode,
-	}, nil
+	return r.tls.certs.watch(ctx, r.logger, r.tls.settings.WatchInterval)
 }
 
 // newGraphServer creates a new server.
@@ -664,11 +698,14 @@ func (r *Router) newServer(ctx context.Context, response *routerconfig.Response)
 	return nil
 }
 
-// startPQLPoller starts the PQL manifest poller in a background goroutine if configured.
-// Must be called after newServer so that SetOnUpdate has been registered on the store.
-func (r *Router) startPQLPoller(ctx context.Context) {
+// startManifestPollers starts the PQL and MCP manifest pollers in background goroutines
+// if configured.
+func (r *Router) startManifestPollers(ctx context.Context) {
 	if r.pqlPoller != nil {
 		go r.pqlPoller.Poll(ctx)
+	}
+	if r.mcpManifestPoller != nil {
+		go r.mcpManifestPoller.Poll(ctx)
 	}
 }
 
@@ -707,9 +744,11 @@ func (r *Router) initModules(ctx context.Context) error {
 		moduleInstance := moduleInfo.New()
 
 		mc := &ModuleContext{
-			Context: ctx,
-			Module:  moduleInstance,
-			Logger:  r.logger.With(zap.String("module", string(moduleInfo.ID))),
+			Context:                 ctx,
+			Module:                  moduleInstance,
+			Logger:                  r.logger.With(zap.String("module", string(moduleInfo.ID))),
+			PrometheusMeterProvider: r.promMeterProvider,
+			OTLPMeterProvider:       r.otlpMeterProvider,
 		}
 
 		moduleConfig, ok := r.modulesConfig[string(moduleInfo.ID)]
@@ -844,12 +883,20 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		readTimeout:        r.routerTrafficConfig.RequestReadTimeout,
+		readHeaderTimeout:  r.routerTrafficConfig.RequestHeaderReadTimeout,
+		idleTimeout:        r.routerTrafficConfig.IdleTimeout,
+		writeTimeout:       r.routerTrafficConfig.WriteTimeout,
 		livenessCheckPath:  r.livenessCheckPath,
 		readinessCheckPath: r.readinessCheckPath,
 		healthCheckPath:    r.healthCheckPath,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create server: %w", err)
+	}
+
+	if err := r.watchTLSCertificates(ctx); err != nil {
+		return nil, err
 	}
 
 	r.configureUsageTracking(ctx)
@@ -915,14 +962,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 			// Only ensure sampling rate if the user exports traces to Cosmo Cloud
 			if cosmoCloudTracingEnabled {
-				if r.traceConfig.Sampler > float64(r.registrationInfo.AccountLimits.TraceSamplingRate) {
-					r.logger.Warn(
-						"Trace sampling rate is higher than account limit. Using account limit instead. Please contact support to increase your account limit.",
-						zap.Float64("limit", r.traceConfig.Sampler),
-						zap.String("account_limit", fmt.Sprintf("%.2f", r.registrationInfo.AccountLimits.TraceSamplingRate)),
-					)
-					r.traceConfig.Sampler = float64(r.registrationInfo.AccountLimits.TraceSamplingRate)
-				}
+				applyCosmoCloudTraceSamplingLimit(r.logger, r.traceConfig, float64(r.registrationInfo.AccountLimits.TraceSamplingRate))
 			}
 		}
 	}
@@ -1404,8 +1444,12 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 
 	var operationsDir string
 
-	// If storage provider ID is set, resolve it to a directory path
-	if r.mcp.Storage.ProviderID != "" {
+	if r.mcp.Storage.ObjectPath != "" {
+		if err := r.buildMCPManifestStore(ctx); err != nil {
+			return err
+		}
+	} else if r.mcp.Storage.ProviderID != "" {
+		// If storage provider ID is set, resolve it to a directory path
 		r.logger.Debug("Resolving storage provider for MCP operations",
 			zap.String("provider_id", r.mcp.Storage.ProviderID))
 
@@ -1443,6 +1487,10 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 	}
 	if r.promptToQueryClient != nil {
 		mcpOpts = append(mcpOpts, mcpserver.WithPromptToQueryClient(r.promptToQueryClient))
+	}
+
+	if r.mcpManifestStore != nil {
+		mcpOpts = append(mcpOpts, mcpserver.WithManifestOperations(r.mcpManifestStore.AllOperations))
 	}
 
 	if r.corsOptions != nil {
@@ -1484,7 +1532,67 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 		return fmt.Errorf("failed to start MCP server: %w", err)
 	}
 
+	if r.mcpManifestStore != nil {
+		// Rebuild the tools when the poller loads a new manifest. The MCP server
+		// lives as long as the router, so the bootstrap context bounds the loop.
+		manifestUpdates := r.mcpManifestStore.Subscribe(ctx)
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-manifestUpdates:
+					mcpss.ManifestUpdated()
+				}
+			}
+		}()
+	}
+
 	r.mcpServer = mcpss
+	return nil
+}
+
+// buildMCPManifestStore fetches the MCP operation manifest from its storage provider and
+// sets up the poller that reloads it.
+func (r *Router) buildMCPManifestStore(ctx context.Context) error {
+	cfg := r.mcp.Storage
+
+	var loader operationmanifest.Loader
+	var err error
+	if provider, ok := r.providerRegistry.FileSystem(cfg.ProviderID); ok {
+		loader = operationmanifest.NewFileLoader(provider.Path, cfg.ObjectPath)
+	} else if provider, ok := r.providerRegistry.S3(cfg.ProviderID); ok {
+		loader, err = operationmanifest.NewS3Loader(provider, cfg.ObjectPath)
+	} else {
+		return fmt.Errorf("storage provider %q for mcp manifest not found or not a file_system or s3 provider", cfg.ProviderID)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to create mcp manifest loader: %w", err)
+	}
+
+	store := operationmanifest.NewStore(r.logger)
+	poller := operationmanifest.NewPoller(
+		loader,
+		store,
+		cfg.PollInterval,
+		cfg.PollInterval/2,
+		r.logger,
+	)
+
+	if err := poller.FetchInitial(ctx); err != nil {
+		return fmt.Errorf("failed to fetch initial mcp manifest from storage provider %q: %w", cfg.ProviderID, err)
+	}
+
+	r.logger.Info(
+		"Loaded MCP manifest from storage provider",
+		zap.String("provider_id", cfg.ProviderID),
+		zap.String("object_path", cfg.ObjectPath),
+		zap.String("revision", store.Revision()),
+		zap.Int("operation_count", store.OperationCount()),
+	)
+
+	r.mcpManifestStore = store
+	r.mcpManifestPoller = poller
 	return nil
 }
 
@@ -1492,7 +1600,7 @@ func (r *Router) startMCPServer(ctx context.Context) error {
 func (r *Router) buildClients(ctx context.Context) error {
 	registry := r.providerRegistry
 
-	pClient, manifestReader, err := r.buildPersistedOpsClient(registry)
+	pClient, err := r.buildPersistedOpsClient(registry)
 	if err != nil {
 		return err
 	}
@@ -1502,7 +1610,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 		return err
 	}
 
-	pqlStore, err := r.buildManifestStore(ctx, registry, manifestReader)
+	pqlStore, err := r.buildManifestStore(ctx, registry)
 	if err != nil {
 		return err
 	}
@@ -1519,12 +1627,18 @@ func (r *Router) buildClients(ctx context.Context) error {
 			cacheSize = r.cdnConfig.CacheSize.Uint64()
 		}
 
+		if r.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs {
+			r.logger.Warn("allow_mismatched_sha256_ids is enabled: requests for persisted operations whose SHA256 ID doesn't match their body may run a different operation")
+		}
+
 		c, err := persistedoperation.NewClient(&persistedoperation.Options{
 			CacheSize:      cacheSize,
 			Logger:         r.logger,
 			ProviderClient: pClient,
 			APQStore:       apqStore,
 			PQLStore:       pqlStore,
+
+			AllowMismatchedSHA256IDs: r.backwardsCompatibility.PersistedOperations.AllowMismatchedSHA256IDs,
 		})
 		if err != nil {
 			return err
@@ -1537,32 +1651,30 @@ func (r *Router) buildClients(ctx context.Context) error {
 }
 
 // buildPersistedOpsClient creates the storage client for persisted operations.
-// It also returns a manifestReader function when the underlying storage supports
-// manifest fetching (S3 or CDN), which is passed to buildManifestStore.
-func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedoperation.StorageClient, pqlmanifest.ManifestReaderFunc, error) {
+func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedoperation.StorageClient, error) {
 	if r.persistedOperationsConfig.Disabled {
-		return nil, nil, nil
+		return nil, nil
 	}
 
 	providerID := r.persistedOperationsConfig.Storage.ProviderID
 
 	if provider, ok := registry.CDN(providerID); ok {
 		if r.graphApiToken == "" {
-			return nil, nil, errors.New("graph token is required to fetch persisted operations from CDN")
+			return nil, errors.New("graph token is required to fetch persisted operations from CDN")
 		}
 
 		c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
 			Logger: r.logger,
 		})
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create CDN client: %w", err)
+			return nil, fmt.Errorf("failed to create CDN client: %w", err)
 		}
 
 		r.logger.Info(
 			"Use CDN as storage provider for persisted operations",
 			zap.String("provider_id", provider.ID),
 		)
-		return c, c.ReadManifest, nil
+		return c, nil
 	}
 
 	if provider, ok := registry.S3(providerID); ok {
@@ -1576,14 +1688,14 @@ func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedo
 			TraceProvider:    r.tracerProvider,
 		})
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create S3 client: %w", err)
+			return nil, fmt.Errorf("failed to create S3 client: %w", err)
 		}
 
 		r.logger.Info(
 			"Use S3 as storage provider for persisted operations",
 			zap.String("provider_id", provider.ID),
 		)
-		return c, c.ReadManifest, nil
+		return c, nil
 	}
 
 	if provider, ok := registry.FileSystem(providerID); ok {
@@ -1591,37 +1703,36 @@ func (r *Router) buildPersistedOpsClient(registry *ProviderRegistry) (persistedo
 			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
 		})
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create filesystem client: %w", err)
+			return nil, fmt.Errorf("failed to create filesystem client: %w", err)
 		}
 
 		r.logger.Info(
 			"Use file system as storage provider for persisted operations",
 			zap.String("provider_id", provider.ID),
 		)
-		// Filesystem does not support manifest fetching.
-		return c, nil, nil
+		return c, nil
 	}
 
 	if r.graphApiToken != "" {
 		if providerID != "" {
-			return nil, nil, fmt.Errorf("unknown storage provider id '%s' for persisted operations", providerID)
+			return nil, fmt.Errorf("unknown storage provider id '%s' for persisted operations", providerID)
 		}
 
 		c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
 			Logger: r.logger,
 		})
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create CDN client: %w", err)
+			return nil, fmt.Errorf("failed to create CDN client: %w", err)
 		}
 
 		r.logger.Debug(
 			"Default to Cosmo CDN as persisted operations provider",
 			zap.String("url", r.cdnConfig.URL),
 		)
-		return c, c.ReadManifest, nil
+		return c, nil
 	}
 
-	return nil, nil, nil
+	return nil, nil
 }
 
 // buildAPQStore creates the automatic persisted queries store.
@@ -1655,71 +1766,39 @@ func (r *Router) buildAPQStore(registry *ProviderRegistry) (apq.Store, error) {
 }
 
 // buildManifestStore sets up the PQL manifest store and its background poller.
-// manifestReader is obtained from buildPersistedOpsClient and may be nil when the
-// configured storage provider does not support manifest fetching (e.g. filesystem).
-func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegistry, manifestReader pqlmanifest.ManifestReaderFunc) (*pqlmanifest.Store, error) {
+func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegistry) (*operationmanifest.Store, error) {
 	if !r.persistedOperationsConfig.Manifest.Enabled || r.persistedOperationsConfig.Disabled {
 		return nil, nil
 	}
 
-	manifestFileName := r.persistedOperationsConfig.Manifest.FileName
-
 	storageProviderID := r.persistedOperationsConfig.Storage.ProviderID
 
-	if registry.IsFileSystem(storageProviderID) {
-		return nil, fmt.Errorf("filesystem storage provider %q is not supported for PQL manifest; use S3 or CDN instead", storageProviderID)
-	}
+	objectPath := path.Join(r.persistedOperationsConfig.Storage.ObjectPrefix, r.persistedOperationsConfig.Manifest.FileName)
 
-	if storageProviderID != "" {
-		// An explicit storage provider is configured — fetch the manifest at startup and poll for updates.
-		objectPrefix := r.persistedOperationsConfig.Storage.ObjectPrefix
-		objectPath := manifestFileName
-		if objectPrefix != "" {
-			objectPath = path.Join(objectPrefix, manifestFileName)
+	// With no storage provider, fetch the manifest from the Cosmo CDN.
+	var loader operationmanifest.Loader
+	var err error
+	if storageProviderID == "" {
+		if r.graphApiToken == "" {
+			return nil, errors.New("graph token is required for PQL manifest")
 		}
-
-		storageFetcher := pqlmanifest.NewStorageFetcher(manifestReader, objectPath, r.logger)
-
-		pqlStore := pqlmanifest.NewStore(r.logger)
-		poller := pqlmanifest.NewPoller(
-			storageFetcher,
-			pqlStore,
-			r.persistedOperationsConfig.Manifest.PollInterval,
-			r.persistedOperationsConfig.Manifest.PollJitter,
-			r.logger,
-		)
-
-		if err := poller.FetchInitial(ctx); err != nil {
-			return nil, fmt.Errorf("failed to fetch initial PQL manifest from storage provider %q: %w",
-				storageProviderID, err)
-		}
-
-		r.logger.Info(
-			"Loaded PQL manifest from storage provider",
-			zap.String("provider_id", storageProviderID),
-			zap.String("object_path", objectPath),
-			zap.String("revision", pqlStore.Revision()),
-			zap.Int("operation_count", pqlStore.OperationCount()),
-		)
-
-		r.pqlPoller = poller
-		r.pqlStore = pqlStore
-		return pqlStore, nil
+		loader, err = operationmanifest.NewCDNLoader(r.cdnConfig.URL, r.graphApiToken, r.logger)
+	} else if provider, ok := registry.CDN(storageProviderID); ok {
+		loader, err = operationmanifest.NewCDNLoader(provider.URL, r.graphApiToken, r.logger)
+	} else if provider, ok := registry.S3(storageProviderID); ok {
+		loader, err = operationmanifest.NewS3Loader(provider, objectPath)
+	} else if provider, ok := registry.FileSystem(storageProviderID); ok {
+		loader = operationmanifest.NewFileLoader(provider.Path, objectPath)
+	} else {
+		return nil, fmt.Errorf("unknown storage provider id %q for PQL manifest", storageProviderID)
 	}
-
-	// No storage provider configured — fetch manifest from Cosmo CDN and poll for updates.
-	if r.graphApiToken == "" {
-		return nil, errors.New("graph token is required for PQL manifest")
-	}
-
-	fetcher, err := pqlmanifest.NewFetcher(r.cdnConfig.URL, r.graphApiToken, r.logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create PQL manifest fetcher: %w", err)
+		return nil, fmt.Errorf("failed to create PQL manifest loader: %w", err)
 	}
 
-	pqlStore := pqlmanifest.NewStore(r.logger)
-	poller := pqlmanifest.NewPoller(
-		fetcher,
+	pqlStore := operationmanifest.NewStore(r.logger)
+	poller := operationmanifest.NewPoller(
+		loader,
 		pqlStore,
 		r.persistedOperationsConfig.Manifest.PollInterval,
 		r.persistedOperationsConfig.Manifest.PollJitter,
@@ -1731,13 +1810,13 @@ func (r *Router) buildManifestStore(ctx context.Context, registry *ProviderRegis
 	}
 
 	r.logger.Info(
-		"Loaded PQL manifest from Cosmo CDN",
+		"Loaded PQL manifest",
+		zap.String("provider_id", storageProviderID),
 		zap.String("revision", pqlStore.Revision()),
 		zap.Int("operation_count", pqlStore.OperationCount()),
 	)
 
 	r.pqlPoller = poller
-	r.pqlStore = pqlStore
 	return pqlStore, nil
 }
 
@@ -1778,12 +1857,20 @@ func (r *Router) Start(ctx context.Context) error {
 		healthcheck:        r.healthcheck,
 		baseURL:            r.baseURL,
 		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		readTimeout:        r.routerTrafficConfig.RequestReadTimeout,
+		readHeaderTimeout:  r.routerTrafficConfig.RequestHeaderReadTimeout,
+		idleTimeout:        r.routerTrafficConfig.IdleTimeout,
+		writeTimeout:       r.routerTrafficConfig.WriteTimeout,
 		livenessCheckPath:  r.livenessCheckPath,
 		readinessCheckPath: r.readinessCheckPath,
 		healthCheckPath:    r.healthCheckPath,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create server: %w", err)
+	}
+
+	if err := r.watchTLSCertificates(ctx); err != nil {
+		return err
 	}
 
 	if r.reloadPersistentState == nil {
@@ -1828,7 +1915,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return err
 	}
 
-	r.startPQLPoller(ctx)
+	r.startManifestPollers(ctx)
 
 	if r.playgroundConfig.Enabled {
 		r.logger.Info(
@@ -1896,7 +1983,7 @@ func (r *Router) startWithStaticExecutionConfig(ctx context.Context) error {
 		return err
 	}
 
-	r.startPQLPoller(ctx)
+	r.startManifestPollers(ctx)
 
 	var (
 		w          watcher.WatcherFunc
@@ -2235,10 +2322,6 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	if r.pqlStore != nil {
-		r.pqlStore.Close()
-	}
-
 	r.usage.Close()
 
 	wg.Wait()
@@ -2384,6 +2467,7 @@ func CorsDefaultOptions() *cors.Config {
 			http.MethodPost,
 		},
 		AllowHeaders:     []string{},
+		ExposeHeaders:    []string{},
 		AllowCredentials: false,
 	}
 }
@@ -2600,6 +2684,7 @@ func DefaultRouterTrafficConfig() *config.RouterTrafficConfiguration {
 	return &config.RouterTrafficConfiguration{
 		MaxRequestBodyBytes:        1000 * 1000 * 5, // 5 MB
 		ResponseCompressionMinSize: 1024 * 4,        // 4 KiB
+		RequestReadTimeout:         defaultServerReadTimeout,
 	}
 }
 
@@ -2845,6 +2930,18 @@ func WithApolloRouterCompatibilityFlags(cfg config.ApolloRouterCompatibilityFlag
 	}
 }
 
+func WithGraphQLOverHTTP(cfg config.GraphQLOverHTTPConfiguration) Option {
+	return func(r *Router) {
+		r.graphqlOverHTTP = cfg
+	}
+}
+
+func WithBackwardsCompatibility(cfg config.BackwardsCompatibilityConfiguration) Option {
+	return func(r *Router) {
+		r.backwardsCompatibility = cfg
+	}
+}
+
 func WithStorageProviders(cfg config.StorageProviders) Option {
 	return func(r *Router) {
 		r.storageProviders = cfg
@@ -3021,7 +3118,7 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDiale
 	}
 
 	if clientTLS != nil {
-		transport.TLSClientConfig = clientTLS
+		transport.TLSClientConfig = clientTLS.Clone()
 	}
 
 	if traceDialer != nil {
@@ -3030,6 +3127,34 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDiale
 	}
 
 	return transport
+}
+
+// applyCosmoCloudTraceSamplingLimit lowers the sampling rate of every Cosmo
+// Cloud exporter above the account limit to the limit, so the traces recorded
+// because an upstream service sampled them also stay within it. It only warns
+// when the limit lowers the rate of the traces the router samples itself, which
+// is the lower of the global and the exporter rate. Other exporters keep their
+// rates.
+func applyCosmoCloudTraceSamplingLimit(logger *zap.Logger, traceConfig *rtrace.Config, accountLimit float64) {
+	for _, exporter := range traceConfig.Exporters {
+		if !rtrace.IsDefaultExporter(exporter) {
+			continue
+		}
+		rate := rtrace.ExporterSamplingRate(exporter)
+		if rate <= accountLimit {
+			continue
+		}
+		// The exporter rate is above the limit, so its effective rate only exceeds it when the global rate does.
+		if traceConfig.Sampler > accountLimit {
+			logger.Warn(
+				"Cosmo Cloud trace sampling rate is higher than account limit. Using account limit for the Cosmo Cloud exporter instead. Please contact support to increase your account limit.",
+				zap.String("endpoint", exporter.Endpoint),
+				zap.Float64("sampling_rate", min(traceConfig.Sampler, rate)),
+				zap.String("account_limit", fmt.Sprintf("%.2f", accountLimit)),
+			)
+		}
+		exporter.SamplingRate = &accountLimit
+	}
 }
 
 func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
@@ -3043,6 +3168,7 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 			ExportTimeout: exp.ExportTimeout,
 			Headers:       exp.Headers,
 			HTTPPath:      exp.HTTPPath,
+			SamplingRate:  exp.SamplingRate,
 		})
 	}
 

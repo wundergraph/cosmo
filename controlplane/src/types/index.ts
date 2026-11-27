@@ -50,6 +50,7 @@ export type FeatureIds =
   | 'persisted-operations'
   // Boolean features
   | 'ai'
+  | 'audit-log-streaming'
   | 'cache-warmer'
   | 'composition-ignore-external-keys' // COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID
   | 'field-pruning-grace-period'
@@ -312,6 +313,7 @@ export interface OrganizationDTO {
   billing?: {
     plan: string;
     email?: string;
+    isBillDue?: boolean;
   };
   subscription?: {
     status: string;
@@ -715,6 +717,13 @@ export interface FederatedGraphRequestRateResult {
 export interface DateRange<T extends string | number = string> {
   start: T;
   end: T;
+}
+
+export interface GraphFieldUsage {
+  typeName: string;
+  fieldName: string;
+  requestCount: bigint;
+  subgraphs: { subgraphId: string; requestCount: bigint }[];
 }
 
 export type TimeFilters = {

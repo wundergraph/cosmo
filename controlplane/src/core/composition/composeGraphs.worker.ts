@@ -52,13 +52,13 @@ const sentryEnvVariables = z.object({
     .string()
     .optional()
     .transform((val) => val === 'true')
-    .default('false'),
+    .default(false),
   SENTRY_DSN: z.string().optional(),
   SENTRY_SEND_DEFAULT_PII: z
     .string()
     .optional()
     .transform((val) => val === 'true')
-    .default('false'),
+    .default(false),
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional().default(1),
   SENTRY_PROFILE_SESSION_SAMPLE_RATE: z.coerce.number().min(0).max(1).optional().default(1),
   SENTRY_PROFILE_LIFECYCLE: z.enum(['manual', 'trace']).optional().default('manual'),
@@ -67,7 +67,7 @@ const sentryEnvVariables = z.object({
     .string()
     .optional()
     .transform((val) => val === 'true')
-    .default('false'),
+    .default(false),
 });
 
 const {

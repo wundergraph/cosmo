@@ -191,7 +191,7 @@ It contains the following properties:
 - `subgraph.response.body` (SubgraphResponseBody)
 - `subgraph.response.header` (ResponseHeaders): The headers of the subgraph response. Values are retrieved with `subgraph.response.header.Get('Header-Name')` (case-insensitive). Rules from [response header propagation](/router/proxy-capabilities/subgraph-response-header-operations) have already been applied. Accessing a missing header returns `""`.
 - `subgraph.response.cache.status` (string): What the [response cache](/router/response-cache) did for the fetch: `hit`, `partial_hit`, `miss` or `not_cacheable`. Empty when the response cache is not enabled.
-- `subgraph.response.cache.storeDecision` (string): What became of the response on its way into the response cache: `stored`, or the [reason](/router/response-cache#store-decision) it was not stored. `empty` when nothing was decided, as for a hit or a fetch that is not cacheable. Empty when the response cache is not enabled.
+- `subgraph.response.cache.storeDecision` (string): What became of the response on its way into the response cache: `stored`, or the [reason](/router/response-cache/how-it-works#what-is-stored) it was not stored. `empty` when nothing was decided, as for a hit or a fetch that is not cacheable. Empty when the response cache is not enabled.
 - `subgraph.response.cache.lookupDuration` (time.Duration): The time spent asking the response cache.
 - `subgraph.response.cache.entityType` (string): The type the fetch resolves fields of. Empty when the response cache is not enabled.
 
@@ -221,7 +221,7 @@ subgraph.request.error != nil ? subgraph.response.body.raw : ''
 
 #### ClientTrace Properties
 
-Client trace values describe the individual subgraph fetch that is being logged or measured. They are populated in subgraph-scoped expressions such as subgraph access log fields and telemetry attribute expressions. In router-level access logs they are always zero.
+Client trace values describe the individual subgraph fetch that is being logged or measured. They are populated in subgraph-scoped expressions such as subgraph access log fields and telemetry attribute expressions. In router-level access logs they are always zero. You can pinpoint single connections by checking to localAddr and remoteAddr.
 
 - `subgraph.request.clientTrace.fetchDuration` (time.Duration): The duration it took for the router to call the subgraph via HTTP and get a response or error. In case of retries, this value contains the combined duration for all retries. Note: gRPC calls are not supported at the moment.
 - `subgraph.request.clientTrace.connAcquireDuration` (time.Duration): The duration it took to acquire the connection to the subgraph. This includes the dial time if a connection was not reused. If a connection was not successfully acquired, it will be 0. In case of retries, only the last attempt is recorded.
@@ -232,6 +232,12 @@ Client trace values describe the individual subgraph fetch that is being logged 
 - `subgraph.request.clientTrace.timeToLastRequestByte` (time.Duration): The duration between the first request-header write callback and a successful request-complete callback from Go's HTTP transport. This approximates the time from the first to the last request byte. The value is 0 unless both callbacks are observed and the request-complete callback reports no error. In case of retries, the value of the last attempt with both callbacks is recorded. The value is also 0 for single-flight followers because they do not write a separate subgraph request.
 - `subgraph.request.clientTrace.timeToFirstByte` (time.Duration): The duration from completing the request write to receiving the first response byte from the subgraph. In case of retries, only the last attempt is recorded.
 - `subgraph.request.clientTrace.timeToLastByte` (time.Duration): The duration from receiving the first response byte to consuming the last response byte. The value is 0 unless the first response byte is observed and the full response body is consumed, either to EOF or through the declared `Content-Length`. A response that cannot carry a body completes when its headers have been read. The value remains 0 for bodies that are closed early or end in a read error, upgraded or streaming subscription responses, and single-flight followers that do not independently consume the origin response body. In case of retries, the value of the last attempt whose response is fully consumed is recorded.
+- `subgraph.request.clientTrace.connection` (Connection): The connection the subgraph request was sent on. All fields are empty when no connection was acquired, for example when the transport failed before getting one, or for single-flight followers that do not send their own subgraph request. In case of retries, only the last attempt is recorded.
+- `subgraph.request.clientTrace.connection.localAddr` (string): The router's local address (`ip:port`) of the connection. It identifies a single connection when used with remoteAddr, so subgraph access log entries with the same value were sent over the same connection. It is also the client address the subgraph sees, which lets you correlate router and subgraph logs. A local port can be reused once its connection is closed.
+- `subgraph.request.clientTrace.connection.remoteAddr` (string): The address (`ip:port`) the connection is connected to. When a proxy is configured, this is the address of the proxy.
+- `subgraph.request.clientTrace.connection.reused` (bool): Whether the connection was reused from the connection pool instead of being newly dialed.
+- `subgraph.request.clientTrace.connection.wasIdle` (bool): Whether the reused connection was taken from the pool of idle connections.
+- `subgraph.request.clientTrace.connection.idleTime` (time.Duration): How long the reused connection was idle before this request. It is 0 when `wasIdle` is false.
 
 This object is available in template expressions and can be accessed using the `subgraph` identifier. For example, you can access the subgraph name using `subgraph.name` or check for errors using `subgraph.request.error`.
 

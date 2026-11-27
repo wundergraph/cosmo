@@ -62,6 +62,8 @@ type ResponseCacheMetricStore interface {
 	MeasureKeys(ctx context.Context, operation, result string, count int64)
 	// MeasureWriteTTL records the lifetime the entries of a write were stored with.
 	MeasureWriteTTL(ctx context.Context, ttl time.Duration)
+	// MeasureTagHeaderOverflow counts a response whose tags did not fit, by what on_overflow did.
+	MeasureTagHeaderOverflow(ctx context.Context, action string)
 }
 
 // ResponseCacheMetrics is the store for the health metrics of the response cache.
@@ -175,5 +177,13 @@ func (s *ResponseCacheMetrics) MeasureWriteTTL(ctx context.Context, ttl time.Dur
 
 	for _, provider := range s.providers {
 		provider.writeTTL.Record(ctx, ttl.Seconds(), opt)
+	}
+}
+
+func (s *ResponseCacheMetrics) MeasureTagHeaderOverflow(ctx context.Context, action string) {
+	opt := s.withAttrs(otel.WgResponseCacheTagHeaderOverflow.String(action))
+
+	for _, provider := range s.providers {
+		provider.tagHeaderOverflow.Add(ctx, 1, opt)
 	}
 }

@@ -286,6 +286,7 @@ export class OrganizationRepository {
         createdAt: organizations.createdAt,
         billing: {
           plan: organizationBilling.plan,
+          isBillDue: organizationBilling.isBillDue,
         },
         subscription: {
           status: billingSubscriptions.status,
@@ -332,6 +333,7 @@ export class OrganizationRepository {
             billing: plan
               ? {
                   plan,
+                  isBillDue: Boolean(org.billing?.isBillDue),
                 }
               : undefined,
             subscription: org.subscription
@@ -1432,6 +1434,7 @@ export class OrganizationRepository {
       requests: 30,
       // Boolean features
       ai: false,
+      'audit-log-streaming': false,
       [COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID]: false,
       'cache-warmer': false,
       oidc: false,

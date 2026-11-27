@@ -51,8 +51,47 @@ export default async function setup() {
       if (!found) {
         throw new Error(`Realm "${TEST_REALM}" is not yet readable`);
       }
+
+      // Make sure that existing realms use the same settings as a new realm.
+      await keycloakClient.client.realms.update(
+        {
+          realm: TEST_REALM,
+        },
+        {
+          enabled: true,
+          displayName: TEST_REALM,
+          registrationEmailAsUsername: true,
+        },
+      );
     },
     { attempts: 30, baseInterval: 500, maxInterval: 500 },
+  );
+
+  // Declare the signup segmentation attributes so Keycloak keeps them (unmanaged attributes are dropped by default)
+  await retryWithBackoff(
+    async () => {
+      const profile = await keycloakClient.client.users.getProfile({ realm: TEST_REALM });
+      const existing = new Set((profile.attributes ?? []).map((attribute) => attribute.name));
+      const missing = ['company_name', 'use_case', 'current_setup'].filter((name) => !existing.has(name));
+      if (missing.length === 0) {
+        return;
+      }
+
+      await keycloakClient.client.users.updateProfile({
+        ...profile,
+        realm: TEST_REALM,
+        attributes: [
+          ...(profile.attributes ?? []),
+          ...missing.map((name) => ({
+            name,
+            displayName: name,
+            permissions: { view: ['admin'], edit: ['admin'] },
+            multivalued: false,
+          })),
+        ],
+      });
+    },
+    { attempts: 10, baseInterval: 1000, maxInterval: 1000 },
   );
 
   // The client the tests sign users in through. A fresh realm only carries Keycloak's built-in

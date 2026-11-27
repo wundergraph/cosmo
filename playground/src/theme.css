@@ -264,3 +264,22 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 .graphiql-container .CodeMirror-cursor {
   border-left: 2px solid gray !important;
 }
+
+.defer-pill {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 9999px;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.defer-pill[data-slow='true'] {
+  background: hsl(var(--destructive) / 0.18);
+  color: hsl(var(--destructive));
+}
+
+.defer-pill[data-slow='false'] {
+  background: hsl(var(--success) / 0.18);
+  color: hsl(var(--success));
+}
