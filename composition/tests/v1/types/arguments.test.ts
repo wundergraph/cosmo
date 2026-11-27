@@ -28,7 +28,7 @@ import {
   normalizeSubgraphFailure,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
-import { Kind } from 'graphql';
+import { Kind, printType, validate } from 'graphql';
 
 describe('Argument tests', () => {
   const prefix = 'argument "input"';
@@ -340,6 +340,35 @@ describe('Argument tests', () => {
       `),
     );
     expect(warnings).toHaveLength(0);
+  });
+
+  test('that arguments are consistent in client and federated schemas when omitted from an @external field', () => {
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphI, subgraphJ],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+
+    expect(printType(federatedGraphSchema.getType('Entity')!)).toBe(
+      printType(federatedGraphClientSchema.getType('Entity')!),
+    );
+  });
+
+  test('that client and federated schemas return the same validation errors for an @external field argument', () => {
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphI, subgraphJ],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    const operation = parse(`
+      query {
+        entity {
+          field(input: "value")
+        }
+      }
+    `);
+
+    expect(validate(federatedGraphSchema, operation).map((error) => error.message)).toStrictEqual(
+      validate(federatedGraphClientSchema, operation).map((error) => error.message),
+    );
   });
 
   test('that if a required argument is not defined in all definitions of a field, an error is returned', () => {
@@ -736,6 +765,38 @@ const subgraphH: Subgraph = {
     extend type Entity @key(fields: "id") {
       id: Int!
       test: Float!
+    }
+  `),
+};
+
+const subgraphI: Subgraph = {
+  name: 'subgraph-i',
+  url: '',
+  definitions: parse(`
+    extend schema @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@key"])
+
+    type Query {
+      entity: Entity!
+    }
+
+    type Entity @key(fields: "id") {
+      id: ID!
+      field(input: String): String
+    }
+  `),
+};
+
+const subgraphJ: Subgraph = {
+  name: 'subgraph-j',
+  url: '',
+  definitions: parse(`
+    extend schema
+      @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@key", "@external", "@requires"])
+
+    type Entity @key(fields: "id") {
+      id: ID!
+      field: String @external
+      fieldTwo: String @requires(fields: "field")
     }
   `),
 };
