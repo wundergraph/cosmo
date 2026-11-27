@@ -1,0 +1,205 @@
+---
+title: "SubscriptionOnEnd Handler"
+description: "A Cosmo Streams Custom Module, which lets you run logic when a subscription ends"
+icon: "circle-stop"
+---
+
+The `SubscriptionOnEnd` handler is a custom module hook that is called once when a GraphQL subscription ends.
+It is the counterpart of [`SubscriptionOnStart`](/router/cosmo-streams/custom-modules/subscription-on-start) and works for both Cosmo Streams subscriptions and regular GraphQL subscriptions.
+
+Use this handler for:
+- **Subscription logging**: Record when a subscription ends and which operation it belonged to
+- **Metrics**: Count ended subscriptions per operation or client
+- **Cleanup**: Release state that other handlers of the same module keep for a client
+
+## When the handler is called
+
+The handler is called once for each subscription, whatever ended it:
+
+- The client unsubscribed or disconnected
+- The subgraph or the message broker completed the subscription
+- An error closed the subscription
+- The router is shutting down
+
+When several clients share one upstream subscription, the handler is called for each client separately, when that client's subscription ends.
+
+<Warning>
+The handler is also called for a subscription that ended while it was being set up, for example because a `SubscriptionOnStart` handler rejected it.
+It can therefore be called for a subscription that `SubscriptionOnStart` was never called for.
+If the client disconnects while `SubscriptionOnStart` is still running, both handlers can run at the same time.
+</Warning>
+
+## Handler Interface
+
+In order to use the `SubscriptionOnEnd` handler you need to create a [Custom Module](../../custom-modules) which implements the `SubscriptionOnEndHandler` interface.
+
+```go
+type SubscriptionOnEndHandler interface {
+	// SubscriptionOnEnd is called once when a subscription ends
+	SubscriptionOnEnd(ctx SubscriptionOnEndHandlerContext)
+}
+
+type SubscriptionOnEndHandlerContext interface {
+	// Request is the original request received by the router.
+	Request() *http.Request
+	// Logger is the logger for the request
+	Logger() *zap.Logger
+	// Operation is the GraphQL operation
+	Operation() OperationContext
+	// Authentication is the authentication for the request
+	Authentication() authentication.Authentication
+	// Set stores a value under the given key for this subscription
+	Set(key string, value any)
+	// Get returns the value stored under the given key for this subscription
+	Get(key string) (value any, exists bool)
+}
+```
+
+The handler does not return an error. The subscription is already closed when it runs, so nothing can be sent to the client anymore.
+
+## Values stored for a subscription
+
+`ctx.Set` and `ctx.Get` give access to a key/value store that belongs to one subscription.
+[`SubscriptionOnStart`](/router/cosmo-streams/custom-modules/subscription-on-start) and `SubscriptionOnEnd` receive the same store for the same subscription.
+A value stored with `ctx.Set` in `SubscriptionOnStart` is returned by `ctx.Get` in `SubscriptionOnEnd`.
+
+- Every subscription has its own store. Subscriptions that share one WebSocket connection do not see each other's values.
+- All modules share the store of a subscription. Prefix your keys with the name of your module.
+- The store is safe for concurrent use.
+- `ctx.Get` returns `(nil, false)` when no value is stored under the key. This is also the case when the subscription ended before `SubscriptionOnStart` was called for it.
+
+## Limitations
+
+Compared to [`SubscriptionOnStart`](/router/cosmo-streams/custom-modules/subscription-on-start), this handler:
+- Cannot emit events to the client
+- Does not provide the subscription event configuration
+
+<Warning>
+The router waits for the handler before it finishes closing the subscription. Return quickly. Start a goroutine for slow work such as a network call.
+</Warning>
+
+If the handler panics, the router recovers from the panic and logs it as an error.
+
+## Usage Examples
+
+### Log every subscription that ends
+
+```go
+package module
+
+import (
+	"github.com/wundergraph/cosmo/router/core"
+	"go.uber.org/zap"
+)
+
+func init() {
+	// Register your module with the router
+	core.RegisterModule(&SubscriptionEndModule{})
+}
+
+const ModuleID = "subscriptionEndModule"
+
+// SubscriptionEndModule logs the subscriptions that end
+type SubscriptionEndModule struct{}
+
+// SubscriptionOnEnd logs the operation of the subscription that ended
+func (m *SubscriptionEndModule) SubscriptionOnEnd(
+	ctx core.SubscriptionOnEndHandlerContext,
+) {
+	ctx.Logger().Info("Subscription ended",
+		zap.String("operation_name", ctx.Operation().Name()),
+		zap.String("client_name", ctx.Operation().ClientInfo().Name),
+	)
+}
+
+// Module returns the module information for registration
+func (m *SubscriptionEndModule) Module() core.ModuleInfo {
+	return core.ModuleInfo{
+		ID: ModuleID,
+		New: func() core.Module {
+			return &SubscriptionEndModule{}
+		},
+	}
+}
+
+// Interface guards to ensure we implement the required interfaces
+var (
+	_ core.SubscriptionOnEndHandler = (*SubscriptionEndModule)(nil)
+)
+```
+
+### Measure how long a subscription lasted
+
+The following module implements both handlers. `SubscriptionOnStart` stores the start time of the subscription. `SubscriptionOnEnd` reads it and logs the duration.
+
+```go
+package module
+
+import (
+	"time"
+
+	"github.com/wundergraph/cosmo/router/core"
+	"go.uber.org/zap"
+)
+
+func init() {
+	// Register your module with the router
+	core.RegisterModule(&SubscriptionDurationModule{})
+}
+
+const (
+	ModuleID = "subscriptionDurationModule"
+
+	// startedAtKey is prefixed with the module ID, because all modules share the store
+	startedAtKey = ModuleID + ".startedAt"
+)
+
+// SubscriptionDurationModule logs how long each subscription lasted
+type SubscriptionDurationModule struct{}
+
+// SubscriptionOnStart stores the start time of the subscription
+func (m *SubscriptionDurationModule) SubscriptionOnStart(
+	ctx core.SubscriptionOnStartHandlerContext,
+) error {
+	ctx.Set(startedAtKey, time.Now())
+
+	return nil
+}
+
+// SubscriptionOnEnd logs the duration of the subscription that ended
+func (m *SubscriptionDurationModule) SubscriptionOnEnd(
+	ctx core.SubscriptionOnEndHandlerContext,
+) {
+	value, exists := ctx.Get(startedAtKey)
+	if !exists {
+		// The subscription ended before SubscriptionOnStart was called for it
+		return
+	}
+
+	startedAt, ok := value.(time.Time)
+	if !ok {
+		return
+	}
+
+	ctx.Logger().Info("Subscription ended",
+		zap.String("operation_name", ctx.Operation().Name()),
+		zap.Duration("duration", time.Since(startedAt)),
+	)
+}
+
+// Module returns the module information for registration
+func (m *SubscriptionDurationModule) Module() core.ModuleInfo {
+	return core.ModuleInfo{
+		ID: ModuleID,
+		New: func() core.Module {
+			return &SubscriptionDurationModule{}
+		},
+	}
+}
+
+// Interface guards to ensure we implement the required interfaces
+var (
+	_ core.SubscriptionOnStartHandler = (*SubscriptionDurationModule)(nil)
+	_ core.SubscriptionOnEndHandler   = (*SubscriptionDurationModule)(nil)
+)
+```

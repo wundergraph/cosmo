@@ -86,6 +86,8 @@ type HandlerOptions struct {
 	RateLimitConfig          *config.RateLimitConfiguration
 	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	EngineLoaderHooks        resolve.LoaderHooks
+	// SubscriptionOnEndHandlers are called once for each subscription that ends.
+	SubscriptionOnEndHandlers []func(ctx SubscriptionOnEndHandlerContext)
 
 	EnableCacheResponseHeaders      bool
 	EnableResponseHeaderPropagation bool
@@ -120,6 +122,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		rateLimitConfig:                          opts.RateLimitConfig,
 		subgraphErrorPropagation:                 opts.SubgraphErrorPropagation,
 		engineLoaderHooks:                        opts.EngineLoaderHooks,
+		subscriptionOnEndHandlers:                opts.SubscriptionOnEndHandlers,
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
 		sseServerWriteTimeout:                    opts.SSEServerWriteTimeout,
 		headerPropagation:                        opts.HeaderPropagation,
@@ -199,6 +202,7 @@ type GraphQLHandler struct {
 	rateLimitConfig           *config.RateLimitConfiguration
 	subgraphErrorPropagation  config.SubgraphErrorPropagationConfiguration
 	engineLoaderHooks         resolve.LoaderHooks
+	subscriptionOnEndHandlers []func(ctx SubscriptionOnEndHandlerContext)
 	headerPropagation         *HeaderPropagation
 	responseCacheStore        caching.Cache
 	responseCacheErrorHandler func(error)
@@ -388,6 +392,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.engineStats.ConnectionsInc()
 			defer h.engineStats.ConnectionsDec()
 		}
+
+		resolveCtx.OnSubscriptionEnd = newSubscriptionOnEndHook(h.subscriptionOnEndHandlers, reqCtx)
 
 		err := h.executor.Resolver.ResolveGraphQLSubscription(resolveCtx, p.Response, writer)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.Response.DataSources)

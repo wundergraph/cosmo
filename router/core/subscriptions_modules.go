@@ -10,6 +10,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type SubscriptionOnStartHandlerContext interface {
@@ -50,6 +51,13 @@ type SubscriptionOnStartHandlerContext interface {
 	//
 	// You can use EmitEvent to emit this event to subscriptions.
 	NewEvent(data []byte) datasource.MutableStreamEvent
+	// Set stores a value under the given key for this subscription.
+	// A value stored in SubscriptionOnStart can be read with Get in SubscriptionOnEnd
+	// of the same subscription.
+	Set(key string, value any)
+	// Get returns the value stored under the given key for this subscription, ie: (value, true).
+	// If no value is stored under the key it returns (nil, false).
+	Get(key string) (value any, exists bool)
 }
 
 type pubSubPublishEventHookContext struct {
@@ -86,6 +94,7 @@ func (c *pubSubPublishEventHookContext) NewEvent(data []byte) datasource.Mutable
 }
 
 type pubSubSubscriptionOnStartHookContext struct {
+	requestContext                 *requestContext
 	request                        *http.Request
 	logger                         *zap.Logger
 	operation                      OperationContext
@@ -93,6 +102,14 @@ type pubSubSubscriptionOnStartHookContext struct {
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
 	emitEventFn                    func(data []byte)
 	eventBuilder                   datasource.EventBuilderFn
+}
+
+func (c *pubSubSubscriptionOnStartHookContext) Set(key string, value any) {
+	c.requestContext.Set(key, value)
+}
+
+func (c *pubSubSubscriptionOnStartHookContext) Get(key string) (value any, exists bool) {
+	return c.requestContext.Get(key)
 }
 
 func (c *pubSubSubscriptionOnStartHookContext) Request() *http.Request {
@@ -162,11 +179,20 @@ func (e *EngineEvent) Clone() datasource.MutableStreamEvent {
 }
 
 type engineSubscriptionOnStartHookContext struct {
+	requestContext *requestContext
 	request        *http.Request
 	logger         *zap.Logger
 	operation      OperationContext
 	authentication authentication.Authentication
 	emitEventFn    func(data []byte)
+}
+
+func (c *engineSubscriptionOnStartHookContext) Set(key string, value any) {
+	c.requestContext.Set(key, value)
+}
+
+func (c *engineSubscriptionOnStartHookContext) Get(key string) (value any, exists bool) {
+	return c.requestContext.Get(key)
 }
 
 func (c *engineSubscriptionOnStartHookContext) Request() *http.Request {
@@ -227,6 +253,7 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 		}
 
 		hookCtx := &pubSubSubscriptionOnStartHookContext{
+			requestContext:                 requestContext,
 			request:                        requestContext.Request(),
 			logger:                         logger,
 			operation:                      requestContext.Operation(),
@@ -255,6 +282,7 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 		}
 
 		hookCtx := &engineSubscriptionOnStartHookContext{
+			requestContext: requestContext,
 			request:        requestContext.Request(),
 			logger:         logger,
 			operation:      requestContext.Operation(),
@@ -264,6 +292,120 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 
 		return fn(hookCtx)
 	}
+}
+
+type SubscriptionOnEndHandlerContext interface {
+	// Request is the original request received by the router.
+	Request() *http.Request
+	// Logger is the logger for the request
+	Logger() *zap.Logger
+	// Operation is the GraphQL operation
+	Operation() OperationContext
+	// Authentication is the authentication for the request
+	Authentication() authentication.Authentication
+	// Set stores a value under the given key for this subscription.
+	// SubscriptionOnEnd handlers of other modules that run after this one can read it with Get.
+	Set(key string, value any)
+	// Get returns the value stored under the given key for this subscription, ie: (value, true),
+	// e.g. a value that a SubscriptionOnStart handler stored with Set. Every subscription has
+	// its own values, also when several subscriptions share one WebSocket connection.
+	// If no value is stored under the key it returns (nil, false). That is also the case when
+	// the subscription ended before SubscriptionOnStart was called for it.
+	Get(key string) (value any, exists bool)
+}
+
+type subscriptionOnEndHookContext struct {
+	requestContext *requestContext
+	request        *http.Request
+	logger         *zap.Logger
+	operation      OperationContext
+	authentication authentication.Authentication
+}
+
+func (c *subscriptionOnEndHookContext) Set(key string, value any) {
+	c.requestContext.Set(key, value)
+}
+
+func (c *subscriptionOnEndHookContext) Get(key string) (value any, exists bool) {
+	return c.requestContext.Get(key)
+}
+
+func (c *subscriptionOnEndHookContext) Request() *http.Request {
+	return c.request
+}
+
+func (c *subscriptionOnEndHookContext) Logger() *zap.Logger {
+	return c.logger
+}
+
+func (c *subscriptionOnEndHookContext) Operation() OperationContext {
+	return c.operation
+}
+
+func (c *subscriptionOnEndHookContext) Authentication() authentication.Authentication {
+	return c.authentication
+}
+
+type SubscriptionOnEndHandler interface {
+	// SubscriptionOnEnd is called once when a subscription ends, whatever ended it: the client
+	// unsubscribed or disconnected, the subgraph or the event provider completed the
+	// subscription, an error closed it, or the router is shutting down.
+	// When several clients share one upstream subscription, it is called for each of them
+	// separately, when that client's subscription ends.
+	//
+	// It is also called for a subscription that ended while it was being set up, e.g. because
+	// a SubscriptionOnStart handler rejected it. So it can be called for a subscription that
+	// SubscriptionOnStart was never called for, and it can run while SubscriptionOnStart is
+	// still running if the client disconnects in the meantime.
+	//
+	// The subscription is already closed, so nothing can be sent to the client anymore.
+	// The handler blocks the goroutine that ended the subscription, so it should return quickly.
+	SubscriptionOnEnd(ctx SubscriptionOnEndHandlerContext)
+}
+
+// newSubscriptionOnEndHook converts the SubscriptionOnEndHandler functions into the function the
+// engine calls once when the subscription of the given request ends. It returns nil if there are
+// no handlers.
+func newSubscriptionOnEndHook(handlers []func(ctx SubscriptionOnEndHandlerContext), requestContext *requestContext) func() {
+	if len(handlers) == 0 {
+		return nil
+	}
+
+	return func() {
+		logger := requestContext.Logger()
+		if logger == nil {
+			logger = zap.NewNop()
+		}
+		logger = logger.With(zap.String("component", "subscription_on_end_hook"))
+
+		hookCtx := &subscriptionOnEndHookContext{
+			requestContext: requestContext,
+			request:        requestContext.Request(),
+			logger:         logger,
+			operation:      requestContext.Operation(),
+			authentication: requestContext.Authentication(),
+		}
+
+		for _, handler := range handlers {
+			runSubscriptionOnEndHandler(handler, hookCtx)
+		}
+	}
+}
+
+// runSubscriptionOnEndHandler recovers from a panic of the handler. The handler runs on a
+// goroutine of the engine, where a panic would stop the router.
+func runSubscriptionOnEndHandler(handler func(ctx SubscriptionOnEndHandlerContext), hookCtx *subscriptionOnEndHookContext) {
+	defer func() {
+		if r := recover(); r != nil {
+			hookCtx.logger.
+				WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)).
+				Error("[Recovery from handler panic]",
+					zap.Any("error", r),
+				)
+		}
+	}()
+
+	handler(hookCtx)
 }
 
 type StreamReceiveEventHandlerContext interface {

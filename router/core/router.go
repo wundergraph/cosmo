@@ -820,6 +820,10 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.subscriptionHooks.onStart.handlers = append(r.subscriptionHooks.onStart.handlers, handler.SubscriptionOnStart)
 		}
 
+		if handler, ok := moduleInstance.(SubscriptionOnEndHandler); ok {
+			r.subscriptionHooks.onEnd.handlers = append(r.subscriptionHooks.onEnd.handlers, handler.SubscriptionOnEnd)
+		}
+
 		if handler, ok := moduleInstance.(StreamPublishEventHandler); ok {
 			r.subscriptionHooks.onPublishEvents.handlers = append(r.subscriptionHooks.onPublishEvents.handlers, handler.OnPublishEvents)
 		}
