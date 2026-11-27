@@ -37,6 +37,7 @@ const client = CreateClient({
   baseUrl: config.baseURL,
   apiKey: config.apiKey,
   proxyUrl,
+  timeoutMs: config.requestTimeoutMs,
 });
 
 const program = new Command();
