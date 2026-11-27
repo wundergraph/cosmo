@@ -19,10 +19,12 @@ import (
 )
 
 type AcquiredConnection struct {
-	Time     time.Time
-	IdleTime time.Duration
-	Reused   bool
-	WasIdle  bool
+	Time       time.Time
+	IdleTime   time.Duration
+	Reused     bool
+	WasIdle    bool
+	LocalAddr  string
+	RemoteAddr string
 }
 
 type GetConnection struct {
@@ -67,23 +69,30 @@ func (c *ClientTrace) HttpClientTrace() *httptrace.ClientTrace {
 				Time:     time.Now(),
 				HostPort: hostPort,
 			}
-			// GetConn starts a new transport attempt. Keep wroteFirstByte for the
-			// existing time-to-first-request-byte metric, but reset the
-			// first-to-last request span so retries never pair timestamps from
-			// different attempts.
+			// GetConn starts a new transport attempt
+			c.ConnectionAcquired = nil
 			c.attemptFirstByte = time.Time{}
 			c.wroteRequest = time.Time{}
 			c.durations.TimeToLastRequestByte = 0
 		},
 		GotConn: func(info httptrace.GotConnInfo) {
-			c.mu.Lock()
-			defer c.mu.Unlock()
-			c.ConnectionAcquired = &AcquiredConnection{
+			acquired := &AcquiredConnection{
 				Time:     time.Now(),
 				Reused:   info.Reused,
 				WasIdle:  info.WasIdle,
 				IdleTime: info.IdleTime,
 			}
+			if info.Conn != nil {
+				if addr := info.Conn.LocalAddr(); addr != nil {
+					acquired.LocalAddr = addr.String()
+				}
+				if addr := info.Conn.RemoteAddr(); addr != nil {
+					acquired.RemoteAddr = addr.String()
+				}
+			}
+			c.mu.Lock()
+			defer c.mu.Unlock()
+			c.ConnectionAcquired = acquired
 		},
 		DNSStart: func(_ httptrace.DNSStartInfo) {
 			c.mu.Lock()
@@ -475,6 +484,11 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 		return nil
 	}
 
+	// Retry attempts of one fetch share the results container. Clear the
+	// connection so an attempt that never acquired one cannot leave a previous
+	// attempt's connection visible.
+	results.Connection = expr.Connection{}
+
 	connectionGet, connectionAcquired, _, durations := trace.snapshot()
 
 	// The transport can fail before it ever asks the pool for a connection,
@@ -492,6 +506,13 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 	)
 
 	if connectionAcquired != nil {
+		results.Connection = expr.Connection{
+			LocalAddr:  connectionAcquired.LocalAddr,
+			RemoteAddr: connectionAcquired.RemoteAddr,
+			Reused:     connectionAcquired.Reused,
+			WasIdle:    connectionAcquired.WasIdle,
+			IdleTime:   connectionAcquired.IdleTime,
+		}
 		if duration := connectionAcquired.Time.Sub(connectionGet.Time); duration >= 0 {
 			results.ConnectionAcquireDuration = duration
 			t.connectionMetricStore.MeasureConnectionAcquireDuration(

@@ -25,10 +25,10 @@ test-fresh: clean-testcache test
 
 .PHONY: lint lint-fix
 lint:
-	../scripts/golangci-lint.sh run
+	golangci-lint run
 
 lint-fix:
-	../scripts/golangci-lint.sh run --fix
+	golangci-lint run --fix
 
 clean-testcache:
 	go clean -testcache

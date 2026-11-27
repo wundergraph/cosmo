@@ -193,6 +193,20 @@ type ClientTrace struct {
 	TimeToLastRequestByte     time.Duration `expr:"timeToLastRequestByte"`
 	TimeToFirstByte           time.Duration `expr:"timeToFirstByte"`
 	TimeToLastByte            time.Duration `expr:"timeToLastByte"`
+	// Connection identifies the connection the fetch was sent on. It is empty when the
+	// transport failed before acquiring a connection.
+	Connection Connection `expr:"connection"`
+}
+
+// Connection describes the subgraph connection used by a fetch. LocalAddr (the router's
+// ip:port) identifies a single connection and matches the client address the subgraph
+// sees, so it can be used to correlate fetches with each other and with subgraph logs.
+type Connection struct {
+	LocalAddr  string        `expr:"localAddr"`
+	RemoteAddr string        `expr:"remoteAddr"`
+	Reused     bool          `expr:"reused"`
+	WasIdle    bool          `expr:"wasIdle"`
+	IdleTime   time.Duration `expr:"idleTime"`
 }
 
 // Subgraph Related

@@ -1,5 +1,4 @@
 node_modules
-/.bin/
 .husky/_
 .idea
 .vscode
