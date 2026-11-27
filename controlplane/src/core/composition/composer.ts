@@ -23,6 +23,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pLimit from 'p-limit';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
+import { createRouterConfigMetadata, S3RouterConfigMetadata } from '../util/composition.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { ContractRepository } from '../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
@@ -64,11 +65,6 @@ export function getRouterCompatibilityVersionPath(routerCompatibilityVersion: st
 export type CompositionResult = {
   compositions: DeserializedComposedGraph[];
 };
-
-export interface S3RouterConfigMetadata extends Record<string, string> {
-  version: string;
-  'signature-sha256': string;
-}
 
 export type BaseCompositionData = {
   featureFlagRouterExecutionConfigByFeatureFlagName: Map<string, FeatureFlagRouterExecutionConfig>;
@@ -277,10 +273,7 @@ export class Composer {
           key: s3PathDraft,
           body: routerConfigJsonStringBytes,
           contentType: 'application/json; charset=utf-8',
-          metadata: {
-            version: federatedSchemaVersionId,
-            'signature-sha256': '', // The signature will be added by the admission webhook
-          },
+          metadata: createRouterConfigMetadata({ version: federatedSchemaVersionId }),
         });
         try {
           // 2. Create a private URL with a token that the admission webhook can use to fetch the draft config.
@@ -339,10 +332,7 @@ export class Composer {
           key: s3PathReady,
           body: routerConfigJsonStringBytes,
           contentType: 'application/json; charset=utf-8',
-          metadata: {
-            version: federatedSchemaVersionId,
-            'signature-sha256': signatureSha256 || '',
-          },
+          metadata: createRouterConfigMetadata({ version: federatedSchemaVersionId, signature: signatureSha256 }),
         });
       } catch (err: any) {
         this.logger.error(err, `Failed to upload the final router config for ${federatedGraphId} to the blob storage`);

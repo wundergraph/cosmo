@@ -28,7 +28,7 @@ import { cacheWarmerOperations, namespaceCacheWarmerConfig, users } from '../../
 import { DateRange } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
-import { S3RouterConfigMetadata } from '../composition/composer.js';
+import { S3RouterConfigMetadata } from '../util/composition.js';
 import { CacheWarmupOperation } from '../../db/models.js';
 import { traced } from '../tracing.js';
 import { getDateRange, isoDateRangeToTimestamps } from './analytics/util.js';
