@@ -241,8 +241,9 @@ anonymous or the other way round.
 
 Each field is prefixed with its length as a uvarint. Without the prefixes, authenticator `auth`
 with subject `0123` and authenticator `auth0` with subject `123` serialize to the same bytes. Claim
-values that are not strings are JSON-encoded. The kind byte keeps an anonymous client apart from an
-authenticated client whose claims are empty.
+values are JSON-encoded, strings included, so the string claim `"123"` and the number claim `123`
+produce different bytes. The kind byte keeps an anonymous client apart from an authenticated client
+whose claims are empty.
 
 An authenticated request without the identity claim can't negotiate cursors and fails with
 `DELIVERY_GUARANTEE_UNSATISFIABLE`. Falling back to a weaker binding would hide a misconfiguration.
