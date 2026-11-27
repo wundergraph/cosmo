@@ -1,0 +1,98 @@
+{{ if .Values.jobs.analyticsDatabaseSync.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: "{{ include "controlplane.fullname" . | trunc 28 | trimSuffix "-" }}-analytics-database-sync"
+  labels:
+    {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.analyticsDatabaseSync.additionalLabels "context" .) | nindent 4 }}
+spec:
+  schedule: {{ .Values.jobs.analyticsDatabaseSync.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      parallelism: 1
+      template:
+        metadata:
+          name: "{{ include "controlplane.fullname" . | trunc 28 | trimSuffix "-" }}-analytics-database-sync"
+          labels:
+            {{- include "controlplane.job.labels" (dict "additionalLabels" .Values.jobs.analyticsDatabaseSync.additionalLabels "context" .) | nindent 12 }}
+        spec:
+          restartPolicy: OnFailure
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: analytics-database-sync
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+              image: "{{ include "controlplane.image" . }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              env:
+                - name: DB_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "controlplane.secretName" . }}
+                      key: databaseUrl
+                {{- if .Values.configuration.databaseTlsCert }}
+                - name: DB_TLS_CERT
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "controlplane.secretName" . }}
+                      key: databaseTlsCert
+                {{- end }}
+                {{- if .Values.configuration.databaseTlsCa }}
+                - name: DB_TLS_CA
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "controlplane.secretName" . }}
+                      key: databaseTlsCa
+                {{- end }}
+                {{- if .Values.configuration.databaseTlsKey }}
+                - name: DB_TLS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "controlplane.secretName" . }}
+                      key: databaseTlsKey
+                {{- end }}
+                - name: ANALYTICS_DB_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "controlplane.secretName" . }}
+                      key: analyticsDatabaseUrl
+                {{- if .Values.jobs.analyticsDatabaseSync.databaseTlsCa }}
+                - name: ANALYTICS_DB_TLS_CA
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "controlplane.secretName" . }}
+                      key: analyticsDatabaseTlsCa
+                {{- end }}
+                {{- if .Values.jobs.analyticsDatabaseSync.databaseTlsCert }}
+                - name: ANALYTICS_DB_TLS_CERT
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "controlplane.secretName" . }}
+                      key: analyticsDatabaseTlsCert
+                {{- end }}
+                {{- if .Values.jobs.analyticsDatabaseSync.databaseTlsKey }}
+                - name: ANALYTICS_DB_TLS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "controlplane.secretName" . }}
+                      key: analyticsDatabaseTlsKey
+                {{- end }}
+                {{- if .Values.jobs.analyticsDatabaseSync.readonlyUser }}
+                - name: ANALYTICS_DB_READONLY_USER
+                  value: {{ .Values.jobs.analyticsDatabaseSync.readonlyUser | quote }}
+                - name: ANALYTICS_DB_READONLY_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "controlplane.secretName" . }}
+                      key: analyticsDatabaseReadonlyPassword
+                {{- end }}
+              args:
+                - "/app/dist/bin/analytics-db-sync.js"
+{{- end }}

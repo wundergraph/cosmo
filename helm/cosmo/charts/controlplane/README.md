@@ -91,12 +91,20 @@ WunderGraph Cosmo Controlplane
 | imagePullSecrets | list | `[]` |  |
 | ingress.hosts | string | `nil` |  |
 | ingress.tls | list | `[]` |  |
-| jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"cleanupOldData":{"additionalLabels":{},"enabled":false,"schedule":"0 2 1 * *"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteInactiveOrgs":{"additionalLabels":{},"enabled":true,"schedule":"0 0 1 * *"},"deleteUser":{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"},"enableSplitConfigLoading":{"additionalLabels":{},"enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
+| jobs | object | `{"activateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"},"analyticsDatabaseSync":{"additionalLabels":{},"databaseTlsCa":"","databaseTlsCert":"","databaseTlsKey":"","databaseUrl":"","enabled":false,"readonlyPassword":"","readonlyUser":"","schedule":"0 * * * *"},"cleanupOldData":{"additionalLabels":{},"enabled":false,"schedule":"0 2 1 * *"},"clickhouseMigration":{"additionalLabels":{}},"databaseMigration":{"additionalLabels":{}},"deactivateOrganization":{"additionalLabels":{},"enabled":false,"id":"123","reason":"","slug":"foo"},"deleteInactiveOrgs":{"additionalLabels":{},"enabled":true,"schedule":"0 0 1 * *"},"deleteUser":{"additionalLabels":{},"email":"foo@wundergraph.com","enabled":false,"id":"123"},"enableSplitConfigLoading":{"additionalLabels":{},"enabled":false,"id":"123"},"seedOrganization":{"additionalLabels":{}}}` | Configure jobs to be executed in the control plane |
 | jobs.activateOrganization | object | `{"additionalLabels":{},"enabled":false,"id":"123","slug":"foo"}` | Used to activate an organization and remove the scheduled deletion |
 | jobs.activateOrganization.additionalLabels | object | `{}` | Adds additional labels to the job |
 | jobs.activateOrganization.enabled | bool | `false` | Enables the job to be run |
 | jobs.activateOrganization.id | string | `"123"` | The unique identifier of the organization |
 | jobs.activateOrganization.slug | string | `"foo"` | The slug of the organization |
+| jobs.analyticsDatabaseSync | object | `{"additionalLabels":{},"databaseTlsCa":"","databaseTlsCert":"","databaseTlsKey":"","databaseUrl":"","enabled":false,"readonlyPassword":"","readonlyUser":"","schedule":"0 * * * *"}` | Scheduled CronJob that copies the database, without PII, secrets and customer content, into a separate analytics database |
+| jobs.analyticsDatabaseSync.additionalLabels | object | `{}` | Adds additional labels to the job |
+| jobs.analyticsDatabaseSync.databaseTlsCa | string | `""` | When connecting to the analytics database over TLS. Accept a cert in PEM format (as one-line with \n) or file. |
+| jobs.analyticsDatabaseSync.databaseUrl | string | `""` | Connection URL of the analytics database. The `analytics` schema in it is replaced on every run. |
+| jobs.analyticsDatabaseSync.enabled | bool | `false` | Enables the analytics database sync CronJob |
+| jobs.analyticsDatabaseSync.readonlyPassword | string | `""` | Password the read-only login is created with. An existing login keeps its password. |
+| jobs.analyticsDatabaseSync.readonlyUser | string | `""` | Name of the shared read-only login. The job creates it when it does not exist. Leave empty to skip. |
+| jobs.analyticsDatabaseSync.schedule | string | `"0 * * * *"` | Cron schedule (default: every hour) |
 | jobs.cleanupOldData | object | `{"additionalLabels":{},"enabled":false,"schedule":"0 2 1 * *"}` | Scheduled CronJob to delete data (schema checks, audit logs, etc.) older than 90 days |
 | jobs.cleanupOldData.additionalLabels | object | `{}` | Adds additional labels to the job |
 | jobs.cleanupOldData.enabled | bool | `false` | Enables the cleanup CronJob |
