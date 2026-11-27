@@ -1070,7 +1070,7 @@ Configure the response cache. More information on this feature can be found here
 | RESPONSE_CACHE_ENABLED | enabled | <Icon icon="square" /> | Enable the response cache. | `false` |
 | RESPONSE_CACHE_KEY_PREFIX | key_prefix | <Icon icon="square" /> | Prepended to every Redis key. | `cosmo_response_cache:` |
 | RESPONSE_CACHE_ALL_ENABLED | all.enabled | <Icon icon="square" /> | Cache every subgraph without an entry under `subgraphs`. Set to `false` to cache only the subgraphs listed there. | `true` |
-| RESPONSE_CACHE_ALL_FALLBACK_TTL | all.fallback_ttl | <Icon icon="square" /> | Lifetime of a response with a directive that allows a default but no lifetime of its own. Minimum `1s`. | `30s` |
+| RESPONSE_CACHE_ALL_FALLBACK_TTL | all.fallback_ttl | <Icon icon="square" /> | Lifetime of a response with a directive that allows a default but no lifetime of its own. Set to `0s` to disable the fallback. | `30s` |
 | RESPONSE_CACHE_ALL_PRIVATE_ID | all.private_id | <Icon icon="square" /> | [Expression](/router/configuration/template-expressions) naming the private context of a request, so `private` responses can be cached per context. |  |
 |  | subgraphs | <Icon icon="square" /> | Per-subgraph settings keyed by subgraph name: `enabled`, `fallback_ttl`, `private_id`. An entry replaces `all` for that subgraph. Config file only. |  |
 | RESPONSE_CACHE_STORAGE_PROVIDER | storage.provider | <Icon icon="square" /> | `redis`, or `memory`. The memory provider is not suitable for production. | `redis` |

@@ -82,6 +82,7 @@ Here `inventory` is never cached. `products` uses a five-minute default lifetime
 An entry is a full override. Nothing is inherited from `all` and nothing is defaulted:
 
 - `enabled` must be set. An entry without it does not cache the subgraph.
+- Set `fallback_ttl: 0s` under `all` or a named subgraph to cache only responses with a usable `s-maxage`, `max-age`, or `Expires` lifetime. For example, `subgraphs: { products: { enabled: true, fallback_ttl: 0s } }` applies this to products alone.
 - An enabled entry must set `fallback_ttl`. Otherwise startup fails and names the entry.
 - An entry without `private_id` has none. In the example, `products` does not cache `private` responses even though `all` sets an id. Repeat `private_id` in the entry to keep it.
 

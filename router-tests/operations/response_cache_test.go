@@ -1223,7 +1223,7 @@ func responseCacheConfig(t *testing.T, ttl time.Duration) *config.ResponseCacheC
 
 	return &config.ResponseCacheConfiguration{
 		Enabled:   true,
-		All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: ttl},
+		All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: &ttl},
 		KeyPrefix: prefix,
 		Storage: config.ResponseCacheStorageConfig{
 			Provider:   config.ResponseCacheStorageProviderRedis,

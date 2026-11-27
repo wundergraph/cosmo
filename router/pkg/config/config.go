@@ -1232,9 +1232,9 @@ type ResponseCacheConfiguration struct {
 
 // ResponseCacheSubgraphConfiguration is what the cache does for a subgraph.
 type ResponseCacheSubgraphConfiguration struct {
-	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"ENABLED"`
-	FallbackTTL time.Duration `yaml:"fallback_ttl" envDefault:"30s" env:"FALLBACK_TTL"`
-	PrivateID   string        `yaml:"private_id,omitempty" env:"PRIVATE_ID"`
+	Enabled     bool           `yaml:"enabled" envDefault:"true" env:"ENABLED"`
+	FallbackTTL *time.Duration `yaml:"fallback_ttl,omitempty" envDefault:"30s" env:"FALLBACK_TTL"`
+	PrivateID   string         `yaml:"private_id,omitempty" env:"PRIVATE_ID"`
 }
 
 type ResponseCacheTagHeaderConfig struct {

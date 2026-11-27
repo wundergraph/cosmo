@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
@@ -36,7 +37,7 @@ func TestResponseCacheSettings(t *testing.T) {
 	t.Run("all alone is the default", func(t *testing.T) {
 		t.Parallel()
 		s := build(t, &config.ResponseCacheConfiguration{
-			All: config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute, PrivateID: "request.auth.claims.sub"},
+			All: config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(time.Minute), PrivateID: "request.auth.claims.sub"},
 		})
 		opts := s.options(headerCtx, failing(t))
 		require.Equal(t, time.Minute, opts.DefaultTTL)
@@ -58,27 +59,27 @@ func TestResponseCacheSettings(t *testing.T) {
 	t.Run("entries without a private_id are built once and shared", func(t *testing.T) {
 		t.Parallel()
 		s := build(t, &config.ResponseCacheConfiguration{
-			All: config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute},
+			All: config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(time.Minute)},
 			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{
-				"mood":      {Enabled: true, FallbackTTL: time.Hour},
+				"mood":      {Enabled: true, FallbackTTL: new(time.Hour)},
 				"employees": {Enabled: false},
 			},
 		})
 		first := s.options(headerCtx, failing(t)).Subgraphs
 		second := s.options(headerCtx, failing(t)).Subgraphs
-		require.Equal(t, reflect.ValueOf(first).Pointer(), reflect.ValueOf(second).Pointer(), "the same map every request")
-		require.Equal(t, time.Hour, first["mood"].DefaultTTL)
-		require.False(t, first["mood"].Disabled)
-		require.True(t, first["employees"].Disabled)
+		assert.Equal(t, reflect.ValueOf(first).Pointer(), reflect.ValueOf(second).Pointer(), "the same map every request")
+		assert.Equal(t, new(time.Hour), first["mood"].DefaultTTL)
+		assert.False(t, first["mood"].Disabled)
+		assert.True(t, first["employees"].Disabled)
 	})
 
 	t.Run("an entry's private_id is resolved per request and replaces all's", func(t *testing.T) {
 		t.Parallel()
 		s := build(t, &config.ResponseCacheConfiguration{
-			All: config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute, PrivateID: "request.auth.claims.sub"},
+			All: config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(time.Minute), PrivateID: "request.auth.claims.sub"},
 			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{
-				"mood":      {Enabled: true, FallbackTTL: time.Minute, PrivateID: "request.header.Get('X-User-Id')"},
-				"employees": {Enabled: true, FallbackTTL: time.Minute},
+				"mood":      {Enabled: true, FallbackTTL: new(time.Minute), PrivateID: "request.header.Get('X-User-Id')"},
+				"employees": {Enabled: true, FallbackTTL: new(time.Minute)},
 			},
 		})
 		opts := s.options(headerCtx, failing(t))
@@ -94,10 +95,10 @@ func TestResponseCacheSettings(t *testing.T) {
 	t.Run("one expression compiles once however many entries share it", func(t *testing.T) {
 		t.Parallel()
 		s := build(t, &config.ResponseCacheConfiguration{
-			All: config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute, PrivateID: "request.auth.claims.sub"},
+			All: config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(time.Minute), PrivateID: "request.auth.claims.sub"},
 			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{
-				"mood":      {Enabled: true, FallbackTTL: time.Minute, PrivateID: "request.auth.claims.sub"},
-				"employees": {Enabled: true, FallbackTTL: time.Minute, PrivateID: "request.auth.claims.sub"},
+				"mood":      {Enabled: true, FallbackTTL: new(time.Minute), PrivateID: "request.auth.claims.sub"},
+				"employees": {Enabled: true, FallbackTTL: new(time.Minute), PrivateID: "request.auth.claims.sub"},
 			},
 		})
 		require.Same(t, s.all, s.entries["mood"].privateID)
@@ -107,7 +108,7 @@ func TestResponseCacheSettings(t *testing.T) {
 	t.Run("a disabled entry's private_id is not compiled", func(t *testing.T) {
 		t.Parallel()
 		build(t, &config.ResponseCacheConfiguration{
-			All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute},
+			All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(time.Minute)},
 			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{"mood": {Enabled: false, PrivateID: "request.nope"}},
 		})
 	})
@@ -115,8 +116,8 @@ func TestResponseCacheSettings(t *testing.T) {
 	t.Run("a bad entry private_id is refused by name", func(t *testing.T) {
 		t.Parallel()
 		_, err := NewResponseCacheSettings(&config.ResponseCacheConfiguration{
-			All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute},
-			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{"mood": {Enabled: true, FallbackTTL: time.Minute, PrivateID: "request.nope"}},
+			All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(time.Minute)},
+			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{"mood": {Enabled: true, FallbackTTL: new(time.Minute), PrivateID: "request.nope"}},
 		}, expr.CreateNewExprManager(), known, zap.NewNop())
 		require.ErrorContains(t, err, "response_cache.subgraphs.mood: response cache private_id")
 	})
@@ -125,7 +126,7 @@ func TestResponseCacheSettings(t *testing.T) {
 		t.Parallel()
 		core, logs := observer.New(zap.WarnLevel)
 		s, err := NewResponseCacheSettings(&config.ResponseCacheConfiguration{
-			All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: time.Minute},
+			All:       config.ResponseCacheSubgraphConfiguration{Enabled: true, FallbackTTL: new(time.Minute)},
 			Subgraphs: map[string]config.ResponseCacheSubgraphConfiguration{"nope": {Enabled: false}, "mood": {Enabled: false}},
 		}, expr.CreateNewExprManager(), known, zap.New(core))
 		require.NoError(t, err)

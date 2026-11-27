@@ -3176,6 +3176,29 @@ version: "1"
 // entry never passes through env parsing, so it is explicit, and nothing under
 // all leaks into it.
 func TestResponseCacheSubgraphConfig(t *testing.T) {
+	t.Run("explicit zero survives loading from YAML and env", func(t *testing.T) {
+		cases := []struct{ env, all string }{
+			{"0s", "{}"},
+			{"30s", "{fallback_ttl: 0s}"},
+		}
+
+		for _, tc := range cases {
+			t.Setenv("RESPONSE_CACHE_ALL_FALLBACK_TTL", tc.env)
+			f := createTempFileFromFixture(t, `version: "1"
+response_cache:
+  all: `+tc.all+`
+  subgraphs:
+    mood: {enabled: true, fallback_ttl: 0s}
+    employees: {enabled: true}
+`)
+			cfg, err := LoadConfig([]string{f})
+			require.NoError(t, err)
+			assert.Equal(t, new(time.Duration), cfg.Config.ResponseCache.All.FallbackTTL)
+			assert.Equal(t, new(time.Duration), cfg.Config.ResponseCache.Subgraphs["mood"].FallbackTTL)
+			assert.Nil(t, cfg.Config.ResponseCache.Subgraphs["employees"].FallbackTTL)
+		}
+	})
+
 	t.Run("a map entry is explicit, nothing is defaulted or taken from all", func(t *testing.T) {
 		f := createTempFileFromFixture(t, `
 version: "1"
@@ -3196,21 +3219,21 @@ response_cache:
 		require.NoError(t, err)
 
 		rc := cfg.Config.ResponseCache
-		require.True(t, rc.All.Enabled)
-		require.Equal(t, 2*time.Minute, rc.All.FallbackTTL)
+		assert.True(t, rc.All.Enabled)
+		assert.Equal(t, new(2*time.Minute), rc.All.FallbackTTL)
 
 		products := rc.Subgraphs["products"]
-		require.False(t, products.Enabled, "a fallback_ttl alone does not enable an entry")
-		require.Equal(t, 5*time.Minute, products.FallbackTTL)
-		require.Empty(t, products.PrivateID, "nothing is inherited from all")
+		assert.False(t, products.Enabled, "a fallback_ttl alone does not enable an entry")
+		assert.Equal(t, new(5*time.Minute), products.FallbackTTL)
+		assert.Empty(t, products.PrivateID, "nothing is inherited from all")
 
 		inventory := rc.Subgraphs["inventory"]
-		require.False(t, inventory.Enabled)
-		require.Zero(t, inventory.FallbackTTL, "no default, and not all's 2m")
+		assert.False(t, inventory.Enabled)
+		assert.Nil(t, inventory.FallbackTTL, "no default, and not all's 2m")
 
 		reviews := rc.Subgraphs["reviews"]
-		require.True(t, reviews.Enabled)
-		require.Equal(t, 10*time.Second, reviews.FallbackTTL)
+		assert.True(t, reviews.Enabled)
+		assert.Equal(t, new(10*time.Second), reviews.FallbackTTL)
 
 	})
 
@@ -3224,8 +3247,8 @@ response_cache:
 `)
 		cfg, err := LoadConfig([]string{f})
 		require.NoError(t, err)
-		require.Equal(t, 5*time.Minute, cfg.Config.ResponseCache.All.FallbackTTL)
-		require.Equal(t, "request.auth.claims.sub", cfg.Config.ResponseCache.All.PrivateID)
+		assert.Equal(t, new(5*time.Minute), cfg.Config.ResponseCache.All.FallbackTTL)
+		assert.Equal(t, "request.auth.claims.sub", cfg.Config.ResponseCache.All.PrivateID)
 	})
 
 	t.Run("all is reachable from env", func(t *testing.T) {
@@ -3250,16 +3273,36 @@ response_cache:
 		require.ErrorContains(t, err, "at '/response_cache'")
 	})
 
-	t.Run("a too short subgraph fallback_ttl is refused", func(t *testing.T) {
+	t.Run("sub-second fallback TTLs are accepted", func(t *testing.T) {
 		f := createTempFileFromFixture(t, `
 version: "1"
 response_cache:
+  all:
+    fallback_ttl: 0.5s
   subgraphs:
     products:
-      fallback_ttl: 500ms
+      enabled: true
+      fallback_ttl: 1ns
 `)
-		_, err := LoadConfig([]string{f})
-		require.ErrorContains(t, err, "at '/response_cache/subgraphs/products/fallback_ttl'")
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		assert.Equal(t, new(500*time.Millisecond), cfg.Config.ResponseCache.All.FallbackTTL)
+		assert.Equal(t, new(time.Nanosecond), cfg.Config.ResponseCache.Subgraphs["products"].FallbackTTL)
+	})
+
+	t.Run("negative fallback TTLs are rejected", func(t *testing.T) {
+		cases := []struct{ settings, path string }{
+			{"all: {fallback_ttl: -1ns}", "/response_cache/all/fallback_ttl"},
+			{"subgraphs: {products: {fallback_ttl: -1ns}}", "/response_cache/subgraphs/products/fallback_ttl"},
+		}
+
+		for _, tc := range cases {
+			f := createTempFileFromFixture(t, `version: "1"
+response_cache:
+  `+tc.settings)
+			_, err := LoadConfig([]string{f})
+			assert.ErrorContains(t, err, tc.path)
+		}
 	})
 
 	t.Run("an unknown key in a subgraph entry is refused", func(t *testing.T) {

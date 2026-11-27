@@ -955,7 +955,7 @@
     "Subgraphs": {
       "inventory": {
         "Enabled": false,
-        "FallbackTTL": 0,
+        "FallbackTTL": null,
         "PrivateID": ""
       },
       "products": {
