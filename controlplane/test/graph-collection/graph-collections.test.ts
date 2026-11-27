@@ -1,6 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GraphCollectionSortBy } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test, vi } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -375,7 +375,7 @@ describe('Graph Collections', () => {
 
       // Every write, handed a real collection id but the wrong graph.
       await repo.renameCollection(collection.id, 'Hijacked', graphBId);
-      await repo.shareCollection(collection.id, graphBId);
+      await repo.shareCollection(collection.id, 'Cart', graphBId);
       await repo.deleteCollection(collection.id, graphBId);
 
       const list = await client.getGraphCollections({ federatedGraphName: graphA, namespace: 'default' });
@@ -1109,7 +1109,7 @@ describe('Graph Collections', () => {
       expect(bobList.collections[0].createdByEmail).toBe(users.adminAliceCompanyA.email);
     });
 
-    test('Sharing is one-way and cannot be repeated', async () => {
+    test('Sharing a collection that is already shared returns OK and leaves it shared', async () => {
       const { client, server } = await SetupTest({ dbname });
       onTestFinished(() => server.close());
 
@@ -1129,7 +1129,7 @@ describe('Graph Collections', () => {
       );
 
       const again = await client.shareGraphCollection({ federatedGraphId, id: created.id });
-      expect(again.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+      expect(again.response?.code).toBe(EnumStatusCode.OK);
 
       const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
       expect(list.collections[0].isTeamScoped).toBe(true);
@@ -1168,6 +1168,352 @@ describe('Graph Collections', () => {
         expect(rejected.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
       },
     );
+
+    test('Sharing is refused when a team collection already has that name, ignoring case', async () => {
+      const { client, server } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
+      const graphName = genID('fedGraph');
+      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+      const federatedGraphId = (await client.getFederatedGraphByName({ name: graphName, namespace: 'default' })).graph!
+        .id;
+
+      await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Onboarding',
+        teamScoped: true,
+      });
+      const privateOne = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'onboarding',
+      });
+      expect(privateOne.response?.code).toBe(EnumStatusCode.OK);
+
+      const shared = await client.shareGraphCollection({ federatedGraphId, id: privateOne.id });
+      expect(shared.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+      expect(shared.response?.details).toBe(
+        'A team collection named "onboarding" already exists on this graph. Rename this collection before sharing it.',
+      );
+
+      const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
+      expect(list.collections.find((c) => c.id === privateOne.id)?.isTeamScoped).toBe(false);
+    });
+
+    test('Creating a team collection is refused when the name is taken, ignoring case', async () => {
+      const { client, server } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
+      const graphName = genID('fedGraph');
+      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+
+      const first = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Onboarding',
+        teamScoped: true,
+      });
+      expect(first.response?.code).toBe(EnumStatusCode.OK);
+
+      const second = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'ONBOARDING',
+        teamScoped: true,
+      });
+      expect(second.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+      expect(second.response?.details).toBe('A team collection named "ONBOARDING" already exists on this graph.');
+      expect(second.id).toBe('');
+
+      const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
+      expect(list.collections.map((c) => c.name)).toEqual(['Onboarding']);
+    });
+
+    test('Private collections may share a name with each other and with a team collection', async () => {
+      const { client, server } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
+      const graphName = genID('fedGraph');
+      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+
+      for (const teamScoped of [true, false, false]) {
+        const created = await client.createGraphCollection({
+          federatedGraphName: graphName,
+          namespace: 'default',
+          name: 'Onboarding',
+          teamScoped,
+        });
+        expect(created.response?.code).toBe(EnumStatusCode.OK);
+      }
+
+      const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
+      expect(list.collections).toHaveLength(3);
+    });
+
+    test('A write that fails for a reason other than a name conflict returns ERR, not ERR_ALREADY_EXISTS', async () => {
+      const { client, server } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
+      const graphName = genID('fedGraph');
+      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+      const federatedGraphId = (await client.getFederatedGraphByName({ name: graphName, namespace: 'default' })).graph!
+        .id;
+
+      const existing = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Onboarding',
+        teamScoped: false,
+      });
+      expect(existing.response?.code).toBe(EnumStatusCode.OK);
+
+      const failure = { ok: false as const, error: new Error('Something else went wrong') };
+      const spies = [
+        vi.spyOn(GraphCollectionsRepository.prototype, 'createCollection').mockResolvedValue(failure),
+        vi.spyOn(GraphCollectionsRepository.prototype, 'renameCollection').mockResolvedValue(failure),
+        vi.spyOn(GraphCollectionsRepository.prototype, 'shareCollection').mockResolvedValue(failure),
+      ];
+      onTestFinished(() => {
+        for (const spy of spies) {
+          spy.mockRestore();
+        }
+      });
+
+      const created = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Checkout',
+        teamScoped: true,
+      });
+      expect(created.response?.code).toBe(EnumStatusCode.ERR);
+      expect(created.response?.details).toBe('Could not create the collection.');
+
+      const renamed = await client.renameGraphCollection({ federatedGraphId, id: existing.id, name: 'Checkout' });
+      expect(renamed.response?.code).toBe(EnumStatusCode.ERR);
+      expect(renamed.response?.details).toBe('Could not rename the collection.');
+
+      const shared = await client.shareGraphCollection({ federatedGraphId, id: existing.id });
+      expect(shared.response?.code).toBe(EnumStatusCode.ERR);
+      expect(shared.response?.details).toBe('Could not share the collection.');
+    });
+
+    test('Renaming a team collection to a taken team name is refused and leaves it unchanged', async () => {
+      const { client, server } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
+      const graphName = genID('fedGraph');
+      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+      const federatedGraphId = (await client.getFederatedGraphByName({ name: graphName, namespace: 'default' })).graph!
+        .id;
+
+      await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Onboarding',
+        teamScoped: true,
+      });
+      const other = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Checkout',
+        teamScoped: true,
+      });
+
+      const renamed = await client.renameGraphCollection({ federatedGraphId, id: other.id, name: 'onboarding' });
+      expect(renamed.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+      expect(renamed.response?.details).toBe('A team collection named "onboarding" already exists on this graph.');
+
+      const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
+      expect(list.collections.find((c) => c.id === other.id)?.name).toBe('Checkout');
+    });
+
+    test('A team collection can be renamed to its own name with the first letter capitalized', async () => {
+      const { client, server } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
+      const graphName = genID('fedGraph');
+      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+      const federatedGraphId = (await client.getFederatedGraphByName({ name: graphName, namespace: 'default' })).graph!
+        .id;
+
+      const created = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'onboarding',
+        teamScoped: true,
+      });
+
+      const renamed = await client.renameGraphCollection({ federatedGraphId, id: created.id, name: 'Onboarding' });
+      expect(renamed.response?.code).toBe(EnumStatusCode.OK);
+    });
+
+    test('Creating a team collection compares the trimmed name', async () => {
+      const { client, server } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
+      const graphName = genID('fedGraph');
+      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+
+      await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Onboarding',
+        teamScoped: true,
+      });
+
+      const padded = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: '  onboarding  ',
+        teamScoped: true,
+      });
+      expect(padded.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+      expect(padded.response?.details).toBe('A team collection named "onboarding" already exists on this graph.');
+    });
+
+    test('A private collection can be renamed to a team collection’s name', async () => {
+      const { client, server } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
+      const graphName = genID('fedGraph');
+      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+      const federatedGraphId = (await client.getFederatedGraphByName({ name: graphName, namespace: 'default' })).graph!
+        .id;
+
+      await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Onboarding',
+        teamScoped: true,
+      });
+      const privateOne = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Scratch',
+      });
+
+      const renamed = await client.renameGraphCollection({ federatedGraphId, id: privateOne.id, name: 'ONBOARDING' });
+      expect(renamed.response?.code).toBe(EnumStatusCode.OK);
+
+      const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
+      expect(list.collections.find((c) => c.id === privateOne.id)?.name).toBe('ONBOARDING');
+    });
+
+    test('A private collection whose name is taken can be shared after renaming it', async () => {
+      const { client, server } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
+      const graphName = genID('fedGraph');
+      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+      const federatedGraphId = (await client.getFederatedGraphByName({ name: graphName, namespace: 'default' })).graph!
+        .id;
+
+      await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Onboarding',
+        teamScoped: true,
+      });
+      const privateOne = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Onboarding',
+      });
+
+      expect((await client.shareGraphCollection({ federatedGraphId, id: privateOne.id })).response?.code).toBe(
+        EnumStatusCode.ERR_ALREADY_EXISTS,
+      );
+
+      const renamed = await client.renameGraphCollection({
+        federatedGraphId,
+        id: privateOne.id,
+        name: 'Onboarding v2',
+      });
+      expect(renamed.response?.code).toBe(EnumStatusCode.OK);
+
+      const shared = await client.shareGraphCollection({ federatedGraphId, id: privateOne.id });
+      expect(shared.response?.code).toBe(EnumStatusCode.OK);
+
+      const list = await client.getGraphCollections({ federatedGraphName: graphName, namespace: 'default' });
+      expect(list.collections.map((c) => [c.name, c.isTeamScoped])).toEqual([
+        ['Onboarding', true],
+        ['Onboarding v2', true],
+      ]);
+    });
+
+    test('Deleting a team collection frees its name', async () => {
+      const { client, server } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
+      const graphName = genID('fedGraph');
+      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+      const federatedGraphId = (await client.getFederatedGraphByName({ name: graphName, namespace: 'default' })).graph!
+        .id;
+
+      const first = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Onboarding',
+        teamScoped: true,
+      });
+      expect((await client.deleteGraphCollection({ federatedGraphId, id: first.id })).response?.code).toBe(
+        EnumStatusCode.OK,
+      );
+
+      const second = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Onboarding',
+        teamScoped: true,
+      });
+      expect(second.response?.code).toBe(EnumStatusCode.OK);
+    });
+
+    test('Team names are unique per graph, so another graph may reuse one', async () => {
+      const { client, server } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
+      for (const graphName of [genID('fedGraph'), genID('fedGraph')]) {
+        await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+        const created = await client.createGraphCollection({
+          federatedGraphName: graphName,
+          namespace: 'default',
+          name: 'Onboarding',
+          teamScoped: true,
+        });
+        expect(created.response?.code).toBe(EnumStatusCode.OK);
+      }
+    });
+
+    test('A team collection name taken by one member is refused to another member of the organization', async () => {
+      const { client, server, authenticator, users } = await SetupTest({ dbname, enableMultiUsers: true });
+      onTestFinished(() => server.close());
+
+      const graphName = genID('fedGraph');
+      await createFederatedGraph(client, graphName, 'default', [], DEFAULT_ROUTER_URL);
+      const federatedGraphId = (await client.getFederatedGraphByName({ name: graphName, namespace: 'default' })).graph!
+        .id;
+
+      await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Onboarding',
+        teamScoped: true,
+      });
+
+      authenticator.changeUserWithSuppliedContext(users.adminBobCompanyA!);
+
+      const bobPrivate = await client.createGraphCollection({
+        federatedGraphName: graphName,
+        namespace: 'default',
+        name: 'Onboarding',
+      });
+      expect(bobPrivate.response?.code).toBe(EnumStatusCode.OK);
+
+      const bobShare = await client.shareGraphCollection({ federatedGraphId, id: bobPrivate.id });
+      expect(bobShare.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+    });
 
     test('Can create a collection team-scoped from the start', async () => {
       const { client, server } = await SetupTest({ dbname });

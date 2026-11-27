@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -3714,6 +3715,84 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.True(t, ok)
 
 				require.Greater(t, int(timeToLastByte), 0)
+			})
+		})
+
+		t.Run("verify connection values are attached and match the subgraph's client address", func(t *testing.T) {
+			t.Parallel()
+
+			var subgraphSeenAddrs []string
+			var mu sync.Mutex
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "conn_local_addr",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.clientTrace.connection.localAddr",
+						},
+					},
+					{
+						Key: "conn_remote_addr",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.clientTrace.connection.remoteAddr",
+						},
+					},
+					{
+						Key: "conn_reused",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.clientTrace.connection.reused",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								mu.Lock()
+								subgraphSeenAddrs = append(subgraphSeenAddrs, r.RemoteAddr)
+								mu.Unlock()
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+
+				subgraphLogs := xEnv.Observer().FilterMessage("/graphql").FilterField(zap.String("log_type", "client/subgraph")).All()
+				require.Len(t, subgraphLogs, 2)
+
+				first := subgraphLogs[0].ContextMap()
+				second := subgraphLogs[1].ContextMap()
+
+				localAddr, ok := first["conn_local_addr"].(string)
+				require.True(t, ok)
+				require.NotEmpty(t, localAddr)
+
+				remoteAddr, ok := first["conn_remote_addr"].(string)
+				require.True(t, ok)
+				require.NotEmpty(t, remoteAddr)
+				require.Equal(t, false, first["conn_reused"])
+
+				// The second fetch goes over the pooled connection
+				require.Equal(t, localAddr, second["conn_local_addr"])
+				require.Equal(t, remoteAddr, second["conn_remote_addr"])
+				require.Equal(t, true, second["conn_reused"])
+
+				mu.Lock()
+				defer mu.Unlock()
+				require.Equal(t, []string{localAddr, localAddr}, subgraphSeenAddrs)
 			})
 		})
 

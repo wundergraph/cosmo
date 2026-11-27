@@ -20,5 +20,8 @@
   "scripts": {
     "dev": "mintlify dev",
     "lint": "mintlify validate"
+  },
+  "devDependencies": {
+    "mintlify": "4.3.76"
   }
 }

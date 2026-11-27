@@ -19,6 +19,10 @@ export function CreateGroupDialog({ onGroupCreated }: { onGroupCreated(group: Or
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const { mutate, isPending } = useMutation(createOrganizationGroup);
+  // Stays true while the caller reloads the list and opens the new group, so the
+  // dialog keeps blocking the page until the group is ready to configure.
+  const [isFinishing, setIsFinishing] = useState(false);
+  const isBusy = isPending || isFinishing;
   const rbac = useFeature('rbac');
   const isAdmin = useIsAdmin();
 
@@ -64,9 +68,14 @@ export function CreateGroupDialog({ onGroupCreated }: { onGroupCreated(group: Or
                 duration: 3000,
               });
 
-              setOpen(false);
-              reset();
-              await onGroupCreated(data.group);
+              setIsFinishing(true);
+              try {
+                await onGroupCreated(data.group);
+              } finally {
+                setIsFinishing(false);
+                setOpen(false);
+                reset();
+              }
             }
           } else if (data.response?.details) {
             setError('name', { message: data.response.details });
@@ -105,6 +114,10 @@ export function CreateGroupDialog({ onGroupCreated }: { onGroupCreated(group: Or
     <Dialog
       open={open}
       onOpenChange={(open) => {
+        if (isBusy) {
+          return;
+        }
+
         setOpen(open);
         if (!open) {
           reset();
@@ -123,7 +136,7 @@ export function CreateGroupDialog({ onGroupCreated }: { onGroupCreated(group: Or
             <label htmlFor="create-group-name" className="text-sm font-semibold">
               Name <span className="text-destructive">*</span>
             </label>
-            <Input id="create-group-name" className="w-full" disabled={isPending} type="text" {...register('name')} />
+            <Input id="create-group-name" className="w-full" disabled={isBusy} type="text" {...register('name')} />
 
             {errors.name && <span className="px-2 text-xs text-destructive">{errors.name.message}</span>}
           </div>
@@ -135,7 +148,7 @@ export function CreateGroupDialog({ onGroupCreated }: { onGroupCreated(group: Or
             <Textarea
               id="create-group-description"
               className="w-full"
-              disabled={isPending}
+              disabled={isBusy}
               rows={5}
               {...register('description')}
             />
@@ -143,7 +156,7 @@ export function CreateGroupDialog({ onGroupCreated }: { onGroupCreated(group: Or
             {errors.description && <span className="px-2 text-xs text-destructive">{errors.description.message}</span>}
           </div>
 
-          <Button type="submit" disabled={!isValid || isPending} variant="default" isLoading={isPending}>
+          <Button type="submit" disabled={!isValid || isBusy} variant="default" isLoading={isBusy}>
             New Group
           </Button>
         </form>
