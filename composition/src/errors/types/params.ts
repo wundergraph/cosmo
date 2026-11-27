@@ -128,7 +128,21 @@ export type UndefinedCacheTagInputFieldErrorMessageParams = {
   reference: string;
 };
 
+export type UndefinedCacheTagKeyFieldErrorMessageParams = {
+  fieldSets: Array<string>;
+  reference: string;
+};
+
+export type ListCacheTagKeyFieldErrorMessageParams = {
+  listReference: string;
+  reference: string;
+  typeReference: string;
+};
+
 export type InvalidCacheTagReferenceErrorMessageParams = {
+  isList: boolean;
+  // The node type of the named type, e.g., "Enum"; used only if isList is false.
+  namedTypeNodeType: string;
   reference: string;
   typeReference: string;
   untraversableReference: string;
