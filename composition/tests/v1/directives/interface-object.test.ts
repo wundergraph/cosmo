@@ -673,44 +673,63 @@ describe('@interfaceObject tests', () => {
     );
   });
 
-  test('inherits external key fields from each Interface Object in the concrete type configuration', () => {
+  test('that the router configuration merges @external key fields from Interface Objects for each concrete type', () => {
     const accounts = createSubgraph(
       'accounts',
       `
-      type Query { users: [User!]! }
-      interface User @key(fields: "id") @key(fields: "handle") { id: ID! handle: ID! }
-      interface Account @key(fields: "handle") @key(fields: "region") { handle: ID! region: ID! }
-      type Admin implements User & Account @key(fields: "id") @key(fields: "handle") @key(fields: "region") {
-        id: ID!
-        handle: ID!
-        region: ID!
-      }
-      type Member implements User @key(fields: "id") @key(fields: "handle") { id: ID! handle: ID! }
-    `,
+        type Query {
+          users: [User!]!
+        }
+
+        interface User @key(fields: "id") @key(fields: "handle") {
+          id: ID!
+          handle: ID!
+        }
+
+        interface Account @key(fields: "accountId") @key(fields: "handle") {
+          accountId: ID!
+          handle: ID!
+        }
+
+        type Admin implements User & Account @key(fields: "id") @key(fields: "accountId") @key(fields: "handle") {
+          id: ID!
+          accountId: ID!
+          handle: ID!
+        }
+
+        type Member implements User @key(fields: "id") @key(fields: "handle") {
+          id: ID!
+          handle: ID!
+        }
+      `,
     );
     const profiles = createSubgraph(
       'profiles',
       `
-      type Query { bUser: User! }
-      type User @interfaceObject @key(fields: "id") @key(fields: "handle") {
-        id: ID! @external
-        handle: ID!
-      }
-      type Account @interfaceObject @key(fields: "handle") @key(fields: "region") {
-        handle: ID!
-        region: ID! @external
-      }
-    `,
+        type User @key(fields: "id") @key(fields: "handle") @interfaceObject {
+          id: ID! @external
+          handle: ID!
+        }
+
+        type Account @key(fields: "accountId") @key(fields: "handle") @interfaceObject {
+          accountId: ID! @external
+          handle: ID!
+        }
+      `,
     );
 
     const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
       [accounts, profiles],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     );
-    const types = subgraphConfigBySubgraphName.get(profiles.name)!.configurationDataByTypeName;
-    expect(types.get('Admin')!.externalFieldNames).toStrictEqual(new Set(['id', 'region']));
-    expect(types.get('Member')!.externalFieldNames).toStrictEqual(new Set(['id']));
-    expect(types.get('Admin')!.fieldNames).toStrictEqual(new Set(['handle']));
+    const profilesConfig = subgraphConfigBySubgraphName.get(profiles.name);
+    const adminConfig = profilesConfig?.configurationDataByTypeName.get('Admin');
+    const memberConfig = profilesConfig?.configurationDataByTypeName.get('Member');
+
+    expect(adminConfig?.externalFieldNames).toStrictEqual(new Set(['id', 'accountId']));
+    expect(adminConfig?.fieldNames).toStrictEqual(new Set(['handle']));
+    expect(memberConfig?.externalFieldNames).toStrictEqual(new Set(['id']));
+    expect(memberConfig?.fieldNames).toStrictEqual(new Set(['handle']));
   });
 
   test('that @external fields to satisfy an entity Interface are propagated from Interface Object to implementations', () => {

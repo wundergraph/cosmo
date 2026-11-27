@@ -1955,29 +1955,30 @@ export class FederationFactory {
           // The subgraph locations of the Interface Object must be added to the concrete types that implement it
           const entityData = getOrThrowError(this.entityDataByTypeName, concreteTypeName, 'entityDataByTypeName');
           entityData.subgraphNames.add(subgraphName);
-          const configurationData = getValueOrDefault(configurationDataByTypeName, concreteTypeName, () =>
+          const concreteTypeConfiguration = getValueOrDefault(configurationDataByTypeName, concreteTypeName, () =>
             newConfigurationData(true, concreteTypeName),
           );
           addIterableToSet({
             source: interfaceObjectConfiguration.fieldNames,
-            target: configurationData.fieldNames,
+            target: concreteTypeConfiguration.fieldNames,
           });
           if (interfaceObjectConfiguration.externalFieldNames) {
+            concreteTypeConfiguration.externalFieldNames ??= new Set<FieldName>();
             addIterableToSet({
               source: interfaceObjectConfiguration.externalFieldNames,
-              target: (configurationData.externalFieldNames ??= new Set<FieldName>()),
+              target: concreteTypeConfiguration.externalFieldNames,
             });
           }
-          if (!configurationData.keys) {
-            configurationData.keys = [...keys];
+          if (!concreteTypeConfiguration.keys) {
+            concreteTypeConfiguration.keys = [...keys];
           } else {
-            parentLoop: for (const key of keys) {
-              for (const { selectionSet } of configurationData.keys) {
-                if (key.selectionSet === selectionSet) {
-                  continue parentLoop;
-                }
+            const existingKeys = new Set(concreteTypeConfiguration.keys.map((key) => key.selectionSet));
+            for (const key of keys) {
+              if (existingKeys.has(key.selectionSet)) {
+                continue;
               }
-              configurationData.keys.push(key);
+              concreteTypeConfiguration.keys.push(key);
+              existingKeys.add(key.selectionSet);
             }
           }
           const resolvableKeyFieldSets = new Set<string>();
