@@ -112,7 +112,7 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 
 	// Retry logic
 	retries := 0
-	for (rt.RetryOptions.ShouldRetry(err, req, resp)) && retries < rt.RetryOptions.MaxRetryCount {
+	for req.Context().Err() == nil && (rt.RetryOptions.ShouldRetry(err, req, resp)) && retries < rt.RetryOptions.MaxRetryCount {
 		retries++
 
 		// Check if we should use Retry-After header for 429 responses
@@ -139,11 +139,30 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 			rt.RetryOptions.OnRetry(retries, req, resp, sleepDuration, err)
 		}
 
-		// Wait for the specified duration
-		time.Sleep(sleepDuration)
+		// Wait for the specified duration or until the request context is canceled
+		timer := time.NewTimer(sleepDuration)
+		select {
+		case <-timer.C:
+		case <-req.Context().Done():
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			rt.drainBody(resp, requestLogger)
+			if err != nil {
+				return resp, err
+			}
+			return resp, req.Context().Err()
+		}
 
 		// drain the previous response before retrying
 		rt.drainBody(resp, requestLogger)
+
+		if req.Context().Err() != nil {
+			break
+		}
 
 		// Clone the request as it is not safe the reuse the original request after RoundTrip
 		retryRequest, cloneErr := cloneRequest(req)
